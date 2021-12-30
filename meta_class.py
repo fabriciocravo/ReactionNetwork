@@ -6,6 +6,7 @@ import meta_class_utils
 class Model:
 
     # Basic storage of defined variables for model
+    Entity_counter = 0
     Characteristics = set()
     Reactions_object_set = set()
     Species_set = set()
@@ -62,12 +63,12 @@ class Reactions:
     def __create_reactants_string(list_of_reactants):
         reaction_string = ''
         for i, r in enumerate(list_of_reactants):
-            if r[2] > 1:
-                reaction_string += str(r[2]) + '*' + str(r[0])
+            if r['stoichiometry'] > 1:
+                reaction_string += str(r['stoichiometry']) + '*' + str(r['object'])
             else:
-                reaction_string += str(r[0])
+                reaction_string += str(r['object'])
 
-            for j, characteristic in enumerate(r[1]):
+            for j, characteristic in enumerate(r['characteristics']):
                 if j == 0:
                     reaction_string += '.'
                 else:
@@ -105,9 +106,9 @@ class Reactants:
     def __getitem__(self, item):
         return Model.override_get_item(self, item)
 
-    # TODO change to dictionary
     def __init__(self, object_reference, characteristics, stoichiometry=1):
-        self.list_of_reactants = [{'object': object_reference, 'characteristics': characteristics, 'stoichiometry': stoichiometry}]
+        self.list_of_reactants = [{'object': object_reference, 'characteristics': characteristics,
+                                   'stoichiometry': stoichiometry}]
 
     def __add__(self, other):
         self.list_of_reactants += other.list_of_reactants
@@ -116,12 +117,31 @@ class Reactants:
     def __rshift__(self, other):
 
         if isinstance(other, Species):
-            p = Reactants(other, '')
+            p = Reactants(other, set())
         else:
             p = other
 
         reaction = Reactions(self.list_of_reactants, p.list_of_reactants)
         return reaction
+
+    #TODO No more string trauma
+    def __getattr__(self, characteristic):
+
+        '''
+            Let's GO! I can't think of a cleaver comment to explain this idea
+        '''
+        for reactant in self.list_of_reactants:
+
+            species_object = reactant['object']
+            characteristics_from_references = meta_class_utils.unite_characteristics(species_object.species_references)
+
+            if characteristic not in characteristics_from_references:
+                species_object.characteristics.add(characteristic)
+
+            reactant['characteristics'].add(characteristic)
+
+        return self
+
 
 
 # TODO not being used yet
@@ -137,8 +157,6 @@ class Characteristics:
 # TODO Define rshift for species
 class Species:
 
-    entity_counter = 0
-
     def __str__(self):
         return self._name
 
@@ -148,34 +166,37 @@ class Species:
 
     def __rmul__(self, stoichiometry):
         if type(stoichiometry) == int:
-            r = Reactants(self, '', stoichiometry)
+            r = Reactants(self, set(), stoichiometry)
         else:
             raise ValueError('Stoichiometry can only be an int')
 
     def __add__(self, other):
-        r1 = Reactants(self, '')
+        r1 = Reactants(self, set())
         if isinstance(other, Reactants):
             r2 = other
         else:
-            r2 = Reactants(other, '')
+            r2 = Reactants(other, set())
         return r1 + r2
 
     def __radd__(self, other):
         Species.__add__(self, other)
 
     # Adding characteristics to an Entity or Property ####################
-    def __getattr__(self, item):
+    def __getattr__(self, characteristic):
 
         characteristics_from_references = meta_class_utils.unite_characteristics(self.species_references)
+        characteristics = {characteristic}
 
-        # TODO Redundant
+        if characteristic not in characteristics_from_references:
+            self.characteristics.add(characteristic)
 
+        return Reactants(self, characteristics)
 
     # Creation of other objects through multiplication ##################
     def __mul__(self, other):
 
-        self.update_entity_counter()
-        name = 'E' + str(self.entity_counter)
+        Model.Entity_counter += 1
+        name = 'E' + str(Model.Entity_counter)
         new_entity = Species(name)
         new_entity.species_references = meta_class_utils.combine_references(self, other)
         new_entity.species_references.add(new_entity)
@@ -199,8 +220,8 @@ def create_properties(number_of_properties=1):
 
     to_return = []
     for i in range(number_of_properties):
-        Species.entity_counter += 1
-        name = 'P' + str(Species.entity_counter)
+        Model.Entity_counter += 1
+        name = 'P' + str(Model.Entity_counter)
         to_return.append(Species(name))
 
     if number_of_properties == 1:
@@ -211,12 +232,25 @@ def create_properties(number_of_properties=1):
 
 if __name__ == '__main__':
 
-    A, B, C, D = create_properties(4)
-    A.young >> A.old [2.1]
-    B.live >> B.dead  [3]
-    C.sad >> C.happy [4]
-    Human = A*B*C
+    # A, B = create_properties(2)
+    # A.name('Person1')
+    # B.name('Person2')
+    # r1 = (A + B).hot.ready >> (A + B).cold.disapointed [10]
+    # print(r1)
+
+
+    # A.young >> A.old [2.1]
+    # B.live >> B.dead  [3]
+    # C.sad >> C.happy [4]
+    # Human = A*B*C
     # Model = Human | A
     # Model.simulate()
 
+    Ager, Infectable, Living, Phage = create_properties(4)
+    Ager.young >> Ager.old [2.3]
+    Infectable.not_infected >> Infectable.infected [3.5]
+    Living.alive >> Living.dead [1.5]
+    Ecoli = Ager*Infectable*Living
+    Ecoli.not_infected + Phage >> Ecoli.infected [2.1]
+    print(Ecoli.characteristics)
 
