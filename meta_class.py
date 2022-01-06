@@ -14,6 +14,10 @@ class Model:
     Species_from_object = {}
     Last_rate = None
 
+    # Connected Structure
+    Ref_characteristics_to_object = {}
+
+
     # Model essence for Copasi sbml file
     Species = {}
     Mappings = {}
@@ -251,6 +255,5 @@ if __name__ == '__main__':
     Infectable.not_infected >> Infectable.infected [3.5]
     Living.alive >> Living.dead [1.5]
     Ecoli = Ager*Infectable*Living
-    Ecoli.not_infected + Phage >> Ecoli.infected [2.1]
-    print(Ecoli.characteristics)
+
 

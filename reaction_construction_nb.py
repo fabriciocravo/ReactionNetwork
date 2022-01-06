@@ -1,41 +1,5 @@
 from copy import deepcopy
 
-Ref_characteristics_to_object = {
-    'young': 1,
-    'old': 1,
-    'alive': 2,
-    'dead': 2,
-    'sad': 3,
-    'happy': 3
-}
-
-Ref_object_to_characteristics = {
-    1: {'young', 'old'},
-    2: {'alive', 'dead'},
-    3: {'sad', 'happy'}
-}
-
-Species_string_dict = {
-    'Ecoli': {'Ecoli.young.alive.sad',
-              'Ecoli.young.alive.happy',
-              'Ecoli.young.dead.sad',
-              'Ecoli.young.dead.happy',
-              'Ecoli.old.alive.sad',
-              'Ecoli.old.alive.happy',
-              'Ecoli.old.dead.sad',
-              'Ecoli.old.dead.happy'}
-}
-
-Reaction_Rates = {'sad': 2, 'happy': 1}
-
-Reactions = [
-    {'re': [('Ecoli', {'young'}, 1)], 'pr': [('Ecoli', {'old'}, 1)]}
-]
-
-Reactions = [
-    {'re': [], 'pr': [('Ecoli', {'young'}, 1)]}
-]
-
 
 def next_combination(current_state, lists_of_species):
     '''
@@ -52,6 +16,7 @@ def next_combination(current_state, lists_of_species):
 
     try:
         current_state[0] = (current_state[0] + 1) % len(lists_of_species[0])
+
         streak = current_state[0] == 0
         for i in range(1, len(current_state)):
 
@@ -67,7 +32,6 @@ def next_combination(current_state, lists_of_species):
 
 
 def separate_into_orthogonal_reactions(Reactions):
-
     cont_while = True
     while cont_while:
 
@@ -100,7 +64,6 @@ def separate_into_orthogonal_reactions(Reactions):
 
 
 def construct_reactant_structures(reaction, Species_string_dict):
-
     # Just in case there are no reactants in the reaction
     # Which is the creation case
     per_species = []
@@ -124,7 +87,6 @@ def construct_reactant_structures(reaction, Species_string_dict):
 
 
 def construct_cyclic_structure(species_order_list, current_species_string_list):
-
     cyclic_dict = {}
     for species_order_list, species_string in zip(species_order_list, current_species_string_list):
         try:
@@ -136,7 +98,6 @@ def construct_cyclic_structure(species_order_list, current_species_string_list):
 
 
 def construct_product_structure(reaction):
-
     '''
        Here we unpack the products in list. This list will loop through the reactants so we can assign the correct string
        to each product
@@ -154,23 +115,20 @@ def construct_product_structure(reaction):
 
 
 def construct_born_species(born_species, Species_string_dict):
-
     species_string_combinations = []
     for species in born_species:
         species_string_combinations.append(extract_species_strings(species['species'],
-                                                                species['characteristics'],
-                                                                Species_string_dict))
+                                                                   species['characteristics'],
+                                                                   Species_string_dict))
 
     return species_string_combinations
 
 
-def construct_single_reaction_for_sbml(reactant_species_string_list, product_species_string_list,
-                                       born_species_string_list, reaction_rate):
-
-    to_return = {'re': [], 'pr': []}
+def construct_single_reaction_for_sbml(reactant_species_string_list, product_species_string_list, reaction_rate):
+    to_return = {'re': [], 'pr': [], 'kin': reaction_rate}
 
     reactant_count_dict = count_string_dictionary(reactant_species_string_list)
-    product_count_dict = count_string_dictionary(product_species_string_list + born_species_string_list)
+    product_count_dict = count_string_dictionary(product_species_string_list)
 
     for key in reactant_count_dict:
         to_return['re'].append((reactant_count_dict[key], key))
@@ -182,10 +140,7 @@ def construct_single_reaction_for_sbml(reactant_species_string_list, product_spe
 
 
 def count_string_dictionary(list_of_strings):
-
     to_return = {}
-
-    print(list_of_strings)
 
     for e in list_of_strings:
         try:
@@ -197,7 +152,6 @@ def count_string_dictionary(list_of_strings):
 
 
 def extract_species_strings(species, characteristics, Species_string_dict):
-
     species_string_list = []
 
     species_strings = Species_string_dict[species]
@@ -211,7 +165,6 @@ def extract_species_strings(species, characteristics, Species_string_dict):
 
 
 def transform_species_string(species_string, characteristics_to_transform):
-
     species_to_return = deepcopy(species_string)
     for characteristic in characteristics_to_transform:
         replaceable_characteristics = Ref_object_to_characteristics[Ref_characteristics_to_object[characteristic]]
@@ -222,15 +175,47 @@ def transform_species_string(species_string, characteristics_to_transform):
     return species_to_return
 
 
-def extract_reaction_rate():
-    pass
+def extract_reaction_rate(species_string_list, reaction_rate_function, Parameters_For_SBML):
+    if type(reaction_rate_function) == int or type(reaction_rate_function) == float:
+        reaction_rate_string = basic_kinetics_string(species_string_list['reactants'],
+                                                     reaction_rate_function, Parameters_For_SBML)
+
+    elif callable(reaction_rate_function):
+        rate = reaction_rate_function(species_string_list)
+        if type(rate) == int or type(rate) == float:
+            reaction_rate_string = basic_kinetics_string(species_string_list['reactants'],
+                                                         rate, Parameters_For_SBML)
+        else:
+            raise TypeError('The function return a non-valid value')
+
+    elif type(reaction_rate_function) == str:
+        return reaction_rate_function
+    else:
+        raise TypeError('The rate type is not supported')
+
+    return reaction_rate_string
 
 
-def create_all_reactions(Reactions, Species_string_dict):
+# TODO Ask about this
+# TODO REALLY DON'T FORGET THIS, THIS IS VITAL
+# TODO Fabricio there are 3 TODO here don't forget it
+def basic_kinetics_string(reactants, reaction_rate, Parameters_For_SBML):
+    kinetics_string = ""
+    for reactant in reactants:
+        kinetics_string = kinetics_string + str(reactant) + ' * '
+
+    rate_name = 'rate_' + str(len(Parameters_For_SBML))
+    Parameters_For_SBML[rate_name] = (reaction_rate, 'per_min')
+
+    kinetics_string = kinetics_string + rate_name
+
+    return kinetics_string
+
+
+def create_all_reactions(Reactions, Species_string_dict, Reaction_rate_functions):
 
     Reactions_For_SBML = {}
-    res_number = 0
-    reactions_model_formatted = {}
+    Parameters_For_SBML = {}
 
     for reaction in Reactions:
 
@@ -257,32 +242,94 @@ def create_all_reactions(Reactions, Species_string_dict):
             for product in product_list:
 
                 try:
-                    species_string_reactant = cyclic_dict[product['species']]['list'][cyclic_dict[product['species']]['cyclic_value']]
+                    species_string_reactant = cyclic_dict[product['species']]['list'][
+                        cyclic_dict[product['species']]['cyclic_value']]
                     cyclic_dict[product['species']]['cyclic_value'] += cyclic_dict[product['species']]['cyclic_value']
-                    product_species_string_list.append(transform_species_string(species_string_reactant, product['characteristics']))
+                    product_species_string_list.append(
+                        transform_species_string(species_string_reactant, product['characteristics']))
 
                 except KeyError:
                     born_species.append(product)
 
-            if born_species:
-
+            if len(born_species) > 0:
                 born_species_string_combinations = construct_born_species(born_species, Species_string_dict)
-
                 current_state_born = [0] * len(born_species_string_combinations)
                 final_state_born = [0] * len(born_species_string_combinations)
 
-                born_species_string_list = next_combination(current_state_born, born_species_string_combinations)
+            while True:
 
-                reaction_rate = extract_reaction_rate()
-                test = construct_single_reaction_for_sbml(reactant_species_string_list, product_species_string_list,
-                                                   born_species_string_list, 0)
-                print(test)
+                if len(born_species) > 0:
+                    born_species_string_list = next_combination(current_state_born, born_species_string_combinations)
+
+                reaction_rate = extract_reaction_rate({'reactants': reactant_species_string_list,
+                                                       'products': product_species_string_list + born_species_string_list},
+                                                      Reaction_rate_functions['reaction_object'],
+                                                      Parameters_For_SBML)
+
+                assert type(reaction_rate) == str
+
+                Reactions_For_SBML['reaction_' + str(len(Reactions_For_SBML))] = construct_single_reaction_for_sbml(
+                    reactant_species_string_list,
+                    product_species_string_list + born_species_string_list,
+                    reaction_rate)
+
+                if len(born_species) == 0:
+                    break
+                else:
+                    if current_state_born == final_state_born:
+                        break
 
             if current_state == final_state:
                 break
 
+    return Reactions_For_SBML, Parameters_For_SBML
+
 
 if __name__ == '__main__':
+    Ref_characteristics_to_object = {
+        'young': 1,
+        'old': 1,
+        'alive': 2,
+        'dead': 2,
+        'sad': 3,
+        'happy': 3
+    }
 
-    create_all_reactions(Reactions, Species_string_dict)
-    pass
+    Ref_object_to_characteristics = {
+        1: {'young', 'old'},
+        2: {'alive', 'dead'},
+        3: {'sad', 'happy'}
+    }
+
+    Species_string_dict = {
+        'Ecoli': {'Ecoli.young.alive.sad',
+                  'Ecoli.young.alive.happy',
+                  'Ecoli.young.dead.sad',
+                  'Ecoli.young.dead.happy',
+                  'Ecoli.old.alive.sad',
+                  'Ecoli.old.alive.happy',
+                  'Ecoli.old.dead.sad',
+                  'Ecoli.old.dead.happy'}
+    }
+
+
+    def reaction_rate_function_test(reaction_dict):
+        return 5
+
+
+    Reaction_rate_functions = {
+        'reaction_object': reaction_rate_function_test
+    }
+
+    Reactions = [
+        {'re': [('Ecoli', {'young'}, 1)], 'pr': [('Ecoli', {'old'}, 1)]}
+    ]
+
+    Reactions = [
+       {'re': [], 'pr': [('Ecoli', {'young'}, 1)]}
+    ]
+
+    reactions, parameters = create_all_reactions(Reactions, Species_string_dict, Reaction_rate_functions)
+
+    for key in reactions:
+        print(key, reactions[key])
