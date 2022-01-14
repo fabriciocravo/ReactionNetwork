@@ -1,6 +1,4 @@
 
-
-
 class Entity:
 
     def __getattribute__(self, *args):

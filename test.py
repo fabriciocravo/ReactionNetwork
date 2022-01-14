@@ -1,3 +1,7 @@
-L = [['young', 'old'],['green', 'red'], ['deja', 'vu']]
 
-L = i + 1
+species = {
+    'A': 100
+}
+
+for key, value in species.items():
+    print(key, value)

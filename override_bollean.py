@@ -11,4 +11,4 @@ class Boolean:
 if __name__ == '__main__':
 
     A = Boolean('A')
-    print(not A)
+    print(A)

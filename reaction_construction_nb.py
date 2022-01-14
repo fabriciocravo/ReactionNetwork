@@ -64,10 +64,6 @@ def separate_into_orthogonal_reactions(Reactions):
 
 
 def construct_reactant_structures(reaction, Species_string_dict):
-    # Just in case there are no reactants in the reaction
-    # Which is the creation case
-    per_species = []
-
     species_string_combinations = []
     species_order_list = []
 
@@ -75,13 +71,13 @@ def construct_reactant_structures(reaction, Species_string_dict):
         First we construct the lists of the strings of the species involved
         And a list containing the species in order
     '''
-    for reactant in reaction['re']:
+    for reactant in reaction.reactants:
 
-        per_species = []
-        species_order_list.append(reactant[0])
+        species_order_list.append(reactant['object'])
 
-        for _ in range(reactant[2]):
-            species_string_combinations.append(extract_species_strings(reactant[0], reactant[1], Species_string_dict))
+        for _ in range(reactant['stoichiometry']):
+            species_string_combinations.append(extract_species_strings(reactant['object'],
+                                                                       reactant['characteristics'], Species_string_dict))
 
     return species_order_list, species_string_combinations
 
@@ -152,19 +148,25 @@ def count_string_dictionary(list_of_strings):
 
 
 def extract_species_strings(species, characteristics, Species_string_dict):
-    species_string_list = []
 
-    species_strings = Species_string_dict[species]
-    for species_string in species_strings:
+    species_strings_list = []
+    species_strings_to_filter = set()
+
+    for key in Species_string_dict:
+        if species in key.get_references():
+            species_strings_to_filter = species_strings_to_filter.union(Species_string_dict[key])
+
+    for species_string in species_strings_to_filter:
         species_string_split = species_string.split('.')
 
         if all(char in species_string_split for char in characteristics):
-            species_string_list.append(species_string)
+            species_strings_list.append(species_string)
 
-    return species_string_list
+    return species_strings_list
 
 
 def transform_species_string(species_string, characteristics_to_transform):
+
     species_to_return = deepcopy(species_string)
     for characteristic in characteristics_to_transform:
         replaceable_characteristics = Ref_object_to_characteristics[Ref_characteristics_to_object[characteristic]]
@@ -175,21 +177,42 @@ def transform_species_string(species_string, characteristics_to_transform):
     return species_to_return
 
 
-def extract_reaction_rate(species_string_list, reaction_rate_function, Parameters_For_SBML):
+def extract_reaction_rate(species_string_dict, reaction_rate_function, Parameters_For_SBML):
+    '''
+        The order of the reactants appears in species_string_dict appears equality
+        to the order they appear on the reaction
+
+        If an int or a flot is returned we apply basic kinetics from CRN
+        If a str is returned we use that as it is.
+        Remember to set Parameters_For_SBML if needed
+
+        remember 2-Ecoli means Ecoli + Ecoli so stoichiometry must be taken into consideration
+
+        species_string_list is a dictionary with {'reactants' :[ list_of_reactants ], 'products':[ list_of_products ]}
+        reaction_rate_function is the rate function passed by the user
+        Parameters_For_SBML are the parameters used for the SBML construction
+
+        returns: the reaction kinetics as a string for SBML
+    '''
     if type(reaction_rate_function) == int or type(reaction_rate_function) == float:
-        reaction_rate_string = basic_kinetics_string(species_string_list['reactants'],
+        reaction_rate_string = basic_kinetics_string(species_string_dict['reactants'],
                                                      reaction_rate_function, Parameters_For_SBML)
 
     elif callable(reaction_rate_function):
-        rate = reaction_rate_function(species_string_list)
+        rate = reaction_rate_function(species_string_dict, Parameters_For_SBML)
+
         if type(rate) == int or type(rate) == float:
-            reaction_rate_string = basic_kinetics_string(species_string_list['reactants'],
+            reaction_rate_string = basic_kinetics_string(species_string_dict['reactants'],
                                                          rate, Parameters_For_SBML)
+        elif type(rate) == str:
+            return rate
+
         else:
             raise TypeError('The function return a non-valid value')
 
     elif type(reaction_rate_function) == str:
         return reaction_rate_function
+
     else:
         raise TypeError('The rate type is not supported')
 
@@ -220,6 +243,9 @@ def create_all_reactions(Reactions, Species_string_dict, Reaction_rate_functions
     for reaction in Reactions:
 
         species_order_list, species_string_combinations = construct_reactant_structures(reaction, Species_string_dict)
+        print(species_order_list, species_string_combinations)
+        exit()
+
         product_list = construct_product_structure(reaction)
 
         # Now we loop through every possible combination
@@ -261,6 +287,7 @@ def create_all_reactions(Reactions, Species_string_dict, Reaction_rate_functions
                 if len(born_species) > 0:
                     born_species_string_list = next_combination(current_state_born, born_species_string_combinations)
 
+
                 reaction_rate = extract_reaction_rate({'reactants': reactant_species_string_list,
                                                        'products': product_species_string_list + born_species_string_list},
                                                       Reaction_rate_functions['reaction_object'],
@@ -286,6 +313,7 @@ def create_all_reactions(Reactions, Species_string_dict, Reaction_rate_functions
 
 
 if __name__ == '__main__':
+
     Ref_characteristics_to_object = {
         'young': 1,
         'old': 1,
@@ -313,9 +341,9 @@ if __name__ == '__main__':
     }
 
 
-    def reaction_rate_function_test(reaction_dict):
+    def reaction_rate_function_test(*args):
+        reaction_dict = args[0]
         return 5
-
 
     Reaction_rate_functions = {
         'reaction_object': reaction_rate_function_test
@@ -323,10 +351,6 @@ if __name__ == '__main__':
 
     Reactions = [
         {'re': [('Ecoli', {'young'}, 1)], 'pr': [('Ecoli', {'old'}, 1)]}
-    ]
-
-    Reactions = [
-       {'re': [], 'pr': [('Ecoli', {'young'}, 1)]}
     ]
 
     reactions, parameters = create_all_reactions(Reactions, Species_string_dict, Reaction_rate_functions)
