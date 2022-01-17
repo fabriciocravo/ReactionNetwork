@@ -1,7 +1,10 @@
+import copy
+import itertools
 
-species = {
-    'A': 100
-}
+list_of_lists = [
+    ['A', 'B', 'C'],
+    ['Hey', 'Ho'],
+    ['1', '0']
+]
 
-for key, value in species.items():
-    print(key, value)
+for a in itertools.product(list_of_lists):

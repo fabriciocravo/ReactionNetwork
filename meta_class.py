@@ -434,4 +434,3 @@ if __name__ == '__main__':
     Human.happy(100) # Human.young.happy.live
     Human(200) # Human.young.sad.live
     Model.compile(Human)
-

@@ -340,7 +340,6 @@ if __name__ == '__main__':
                   'Ecoli.old.dead.happy'}
     }
 
-
     def reaction_rate_function_test(*args):
         reaction_dict = args[0]
         return 5
@@ -357,3 +356,23 @@ if __name__ == '__main__':
 
     for key in reactions:
         print(key, reactions[key])
+
+    #TODO
+    # Ecoli.not_infected.yellow >> Ecoli.red
+    # Ecoli.not_infected.blue >> Ecoli.red
+
+    # 0 >> Ecoli
+
+    # Ecoli + P >> 0
+    # Ecoli + P >> Ecoli
+
+    # 0 >> Ecoli.young
+
+    # ResourceEater + R >> 2*ResourceEater
+
+    # 0 >> Ecoli
+    # Ecoli >> 2*Ecoli
+
+    # A + B >> C + D
+
+    # Carnivore >> Carnivore + Bone.bloody
