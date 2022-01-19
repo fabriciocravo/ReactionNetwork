@@ -1,4 +1,10 @@
 from copy import deepcopy
+import itertools
+
+
+def iterator_for_combinations(list_of_lists):
+    for i in itertools.product(*list_of_lists):
+        yield i
 
 
 def next_combination(current_state, lists_of_species):
@@ -63,7 +69,7 @@ def separate_into_orthogonal_reactions(Reactions):
             cont_while = False
 
 
-def construct_reactant_structures(reaction, Species_string_dict):
+def construct_reactant_structures(reactant_species, Species_string_dict):
     species_string_combinations = []
     species_order_list = []
 
@@ -71,7 +77,7 @@ def construct_reactant_structures(reaction, Species_string_dict):
         First we construct the lists of the strings of the species involved
         And a list containing the species in order
     '''
-    for reactant in reaction.reactants:
+    for reactant in reactant_species:
 
         species_order_list.append(reactant['object'])
 
@@ -82,9 +88,9 @@ def construct_reactant_structures(reaction, Species_string_dict):
     return species_order_list, species_string_combinations
 
 
-def construct_cyclic_structure(species_order_list, current_species_string_list):
+def construct_cyclic_structure(reactant_order_list, current_species_string_list):
     cyclic_dict = {}
-    for species_order_list, species_string in zip(species_order_list, current_species_string_list):
+    for species_order_list, species_string in zip(reactant_order_list, current_species_string_list):
         try:
             cyclic_dict[species_order_list]['list'].append(species_string)
         except KeyError:
@@ -103,9 +109,9 @@ def construct_product_structure(reaction):
     :return: a list of all products involved unpacked according to their stoichiometry
     '''
     product_list = []
-    for product in reaction['pr']:
-        for _ in range(product[2]):
-            product_list.append({'species': product[0], 'characteristics': product[1]})
+    for product in reaction.products:
+        for _ in range(product['stoichiometry']):
+            product_list.append({'species': product['object'], 'characteristics': product['characteristics']})
 
     return product_list
 
@@ -152,9 +158,7 @@ def extract_species_strings(species, characteristics, Species_string_dict):
     species_strings_list = []
     species_strings_to_filter = set()
 
-    for key in Species_string_dict:
-        if species in key.get_references():
-            species_strings_to_filter = species_strings_to_filter.union(Species_string_dict[key])
+    species_strings_to_filter = species_strings_to_filter.union(Species_string_dict[species])
 
     for species_string in species_strings_to_filter:
         species_string_split = species_string.split('.')
@@ -235,6 +239,23 @@ def basic_kinetics_string(reactants, reaction_rate, Parameters_For_SBML):
     return kinetics_string
 
 
+def get_involved_species(reaction, Species_string_dict):
+
+    reactant_species_combination_list = []
+
+    for reactant in reaction.reactants:
+        species_for_reactant = []
+        for species in Species_string_dict:
+            if reactant['object'] in species.get_references():
+                species_for_reactant.append({'object': species,
+                                             'characteristics': reactant['characteristics'],
+                                             'stoichiometry': reactant['stoichiometry']})
+
+        reactant_species_combination_list.append(species_for_reactant)
+
+    return reactant_species_combination_list
+
+
 def create_all_reactions(Reactions, Species_string_dict, Reaction_rate_functions):
 
     Reactions_For_SBML = {}
@@ -242,25 +263,18 @@ def create_all_reactions(Reactions, Species_string_dict, Reaction_rate_functions
 
     for reaction in Reactions:
 
-        species_order_list, species_string_combinations = construct_reactant_structures(reaction, Species_string_dict)
-        print(species_order_list, species_string_combinations)
-        exit()
+        reactant_species_combination_list = get_involved_species(reaction, Species_string_dict)
+        for combination_of_reactant_species in iterator_for_combinations(reactant_species_combination_list):
 
-        product_list = construct_product_structure(reaction)
+            reactant_order_list, reactant_string_list = \
+                construct_reactant_structures(combination_of_reactant_species, Species_string_dict)
+            product_list = construct_product_structure(reaction)
 
-        # Now we loop through every possible combination
-        current_state = [0] * len(species_string_combinations)
-        final_state = [0] * len(species_string_combinations)
+            for reactants in iterator_for_combinations(reactant_string_list):
+                cyclic_dict = construct_cyclic_structure(reactant_order_list, reactants)
 
-        while True:
-
-            '''
-                reaction_species_string_list has the string of all reactants involved
-                reaction_product_string_list has the string of all products involved
-                mix them to get a single reaction
-            '''
-            reactant_species_string_list = next_combination(current_state, species_string_combinations)
-            cyclic_dict = construct_cyclic_structure(species_order_list, reactant_species_string_list)
+            print(cyclic_dict)
+            exit()
 
             born_species = []
             product_species_string_list = []
@@ -286,7 +300,6 @@ def create_all_reactions(Reactions, Species_string_dict, Reaction_rate_functions
 
                 if len(born_species) > 0:
                     born_species_string_list = next_combination(current_state_born, born_species_string_combinations)
-
 
                 reaction_rate = extract_reaction_rate({'reactants': reactant_species_string_list,
                                                        'products': product_species_string_list + born_species_string_list},

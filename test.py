@@ -7,4 +7,9 @@ list_of_lists = [
     ['1', '0']
 ]
 
-for a in itertools.product(list_of_lists):
+comb = []
+for i in itertools.product(*list_of_lists):
+    comb.append(i)
+    print(i)
+
+

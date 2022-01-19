@@ -2,6 +2,7 @@ import copy
 
 import meta_class_utils
 import reaction_construction_nb
+import itertools
 
 
 class Model:
@@ -22,6 +23,12 @@ class Model:
     def override_get_item(cls, object_to_return, item):
         cls.Last_rate = item
         return object_to_return
+
+    @classmethod
+    def name_all_involved_species(cls, list_of_species_objects):
+        for species in list_of_species_objects:
+            variable_name = [k for k, v in globals().items() if v == species][0]
+            species.name(variable_name)
 
     @classmethod
     def compile(cls, species_to_simulate):
@@ -46,6 +53,9 @@ class Model:
             Also we construct the Species_from_object dictionary
             This dictionary returns the species from an specific object using the object as key
         '''
+
+        # We name the species according to variables names for convenience
+        cls.name_all_involved_species(list_of_species_objects)
 
         # Perform checks
         meta_class_utils.add_negative_complement_to_characteristics(list_of_species_objects)
@@ -417,20 +427,18 @@ def create_properties(number_of_properties=1):
 
 
 if __name__ == '__main__':
+
     Age, Mood, Live = create_properties(3)
-
-    # TODO Work on this
-    # def rate_for_young(human1, human2):
-        #if human1.old:
-            # return f'5*{human1}*{human2}'
-        #else:
-            # return 6
-
-    Age.young >> Age.old [lambda h: 5 if h.young else 6]
+    Age.young >> Age.old [10]
     Mood.sad >> Mood.happy [3]
     Live.live >> Live.dead [40]
     Human = Age * Mood * Live
-    Dog = Age * Live
-    Human.happy(100) # Human.young.happy.live
     Human(200) # Human.young.sad.live
     Model.compile(Human)
+
+    # TODO Work on this
+    # def rate_for_young(human1, human2):
+    #   if human1.old:
+    #       return f'5*{human1}*{human2}'
+    #   else:
+    #       return 6
