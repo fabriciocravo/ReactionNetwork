@@ -1,4 +1,5 @@
 from copy import deepcopy
+import function_rate_code as fr
 import itertools
 
 
@@ -71,30 +72,25 @@ def separate_into_orthogonal_reactions(Reactions):
 
 def construct_reactant_structures(reactant_species, Species_string_dict):
     species_string_combinations = []
-    species_order_list = []
 
     '''
         First we construct the lists of the strings of the species involved
         And a list containing the species in order
     '''
     for reactant in reactant_species:
+        species_string_combinations.append(extract_species_strings(reactant['object'],
+                                                                   reactant['characteristics'], Species_string_dict))
 
-        species_order_list.append(reactant['object'])
-
-        for _ in range(reactant['stoichiometry']):
-            species_string_combinations.append(extract_species_strings(reactant['object'],
-                                                                       reactant['characteristics'], Species_string_dict))
-
-    return species_order_list, species_string_combinations
+    return species_string_combinations
 
 
-def construct_cyclic_structure(reactant_order_list, current_species_string_list):
+def construct_order_structure(species_order_list, current_species_string_list):
     cyclic_dict = {}
-    for species_order_list, species_string in zip(reactant_order_list, current_species_string_list):
+    for species_object, species_string in zip(species_order_list, current_species_string_list):
         try:
-            cyclic_dict[species_order_list]['list'].append(species_string)
+            cyclic_dict[species_object].append(species_string)
         except KeyError:
-            cyclic_dict[species_order_list] = {'list': [species_string], 'cyclic_value': 0}
+            cyclic_dict[species_object] = [species_string]
 
     return cyclic_dict
 
@@ -154,7 +150,6 @@ def count_string_dictionary(list_of_strings):
 
 
 def extract_species_strings(species, characteristics, Species_string_dict):
-
     species_strings_list = []
     species_strings_to_filter = set()
 
@@ -169,164 +164,67 @@ def extract_species_strings(species, characteristics, Species_string_dict):
     return species_strings_list
 
 
-def transform_species_string(species_string, characteristics_to_transform):
-
-    species_to_return = deepcopy(species_string)
-    for characteristic in characteristics_to_transform:
-        replaceable_characteristics = Ref_object_to_characteristics[Ref_characteristics_to_object[characteristic]]
-
-        for rep_cha in replaceable_characteristics:
-            species_to_return = species_to_return.replace('.' + rep_cha, '.' + characteristic)
-
-    return species_to_return
-
-
-def extract_reaction_rate(species_string_dict, reaction_rate_function, Parameters_For_SBML):
-    '''
-        The order of the reactants appears in species_string_dict appears equality
-        to the order they appear on the reaction
-
-        If an int or a flot is returned we apply basic kinetics from CRN
-        If a str is returned we use that as it is.
-        Remember to set Parameters_For_SBML if needed
-
-        remember 2-Ecoli means Ecoli + Ecoli so stoichiometry must be taken into consideration
-
-        species_string_list is a dictionary with {'reactants' :[ list_of_reactants ], 'products':[ list_of_products ]}
-        reaction_rate_function is the rate function passed by the user
-        Parameters_For_SBML are the parameters used for the SBML construction
-
-        returns: the reaction kinetics as a string for SBML
-    '''
-    if type(reaction_rate_function) == int or type(reaction_rate_function) == float:
-        reaction_rate_string = basic_kinetics_string(species_string_dict['reactants'],
-                                                     reaction_rate_function, Parameters_For_SBML)
-
-    elif callable(reaction_rate_function):
-        rate = reaction_rate_function(species_string_dict, Parameters_For_SBML)
-
-        if type(rate) == int or type(rate) == float:
-            reaction_rate_string = basic_kinetics_string(species_string_dict['reactants'],
-                                                         rate, Parameters_For_SBML)
-        elif type(rate) == str:
-            return rate
-
-        else:
-            raise TypeError('The function return a non-valid value')
-
-    elif type(reaction_rate_function) == str:
-        return reaction_rate_function
-
-    else:
-        raise TypeError('The rate type is not supported')
-
-    return reaction_rate_string
-
-
-# TODO Ask about this
-# TODO REALLY DON'T FORGET THIS, THIS IS VITAL
-# TODO Fabricio there are 3 TODO here don't forget it
-def basic_kinetics_string(reactants, reaction_rate, Parameters_For_SBML):
-    kinetics_string = ""
-    for reactant in reactants:
-        kinetics_string = kinetics_string + str(reactant) + ' * '
-
-    rate_name = 'rate_' + str(len(Parameters_For_SBML))
-    Parameters_For_SBML[rate_name] = (reaction_rate, 'per_min')
-
-    kinetics_string = kinetics_string + rate_name
-
-    return kinetics_string
-
-
 def get_involved_species(reaction, Species_string_dict):
-
     reactant_species_combination_list = []
+    base_species_order = []
+    species_for_reactant = []
 
     for reactant in reaction.reactants:
-        species_for_reactant = []
-        for species in Species_string_dict:
-            if reactant['object'] in species.get_references():
-                species_for_reactant.append({'object': species,
-                                             'characteristics': reactant['characteristics'],
-                                             'stoichiometry': reactant['stoichiometry']})
+        for _ in range(reactant['stoichiometry']):
+
+            species_for_reactant = []
+            base_species_order.append(reactant['object'])
+
+            for species in Species_string_dict:
+                if reactant['object'] in species.get_references():
+                    species_for_reactant.append({'object': species,
+                                                 'characteristics': reactant['characteristics']})
 
         reactant_species_combination_list.append(species_for_reactant)
 
-    return reactant_species_combination_list
+    return base_species_order, reactant_species_combination_list
 
 
-def create_all_reactions(Reactions, Species_string_dict, Reaction_rate_functions):
-
+def create_all_reactions(Reactions, Species_string_dict,
+                         Ref_object_to_characteristics,
+                         Ref_characteristics_to_object):
     Reactions_For_SBML = {}
     Parameters_For_SBML = {}
+    reaction_number = 0
 
     for reaction in Reactions:
 
-        reactant_species_combination_list = get_involved_species(reaction, Species_string_dict)
+        base_species_order, reactant_species_combination_list = get_involved_species(reaction, Species_string_dict)
         for combination_of_reactant_species in iterator_for_combinations(reactant_species_combination_list):
 
-            reactant_order_list, reactant_string_list = \
+            reactant_species_string_combination_list = \
                 construct_reactant_structures(combination_of_reactant_species, Species_string_dict)
-            product_list = construct_product_structure(reaction)
 
-            for reactants in iterator_for_combinations(reactant_string_list):
-                cyclic_dict = construct_cyclic_structure(reactant_order_list, reactants)
+            for reactant_string_list in iterator_for_combinations(reactant_species_string_combination_list):
+                product_object_list = construct_product_structure(reaction)
+                order_structure = construct_order_structure(base_species_order, reactant_string_list)
 
-            print(cyclic_dict)
-            exit()
+                product_species_species_string_combination_list = reaction.order(order_structure, product_object_list,
+                                                                                 Species_string_dict,
+                                                                                 Ref_object_to_characteristics,
+                                                                                 Ref_characteristics_to_object)
 
-            born_species = []
-            product_species_string_list = []
-            born_species_string_list = []
-            for product in product_list:
+                for product_string_list in iterator_for_combinations(product_species_species_string_combination_list):
+                    reaction_number += reaction_number
+                    fr.extract_reaction_rate(combination_of_reactant_species, reactant_string_list
+                                             , lambda x: x, Parameters_For_SBML)
+                    exit()
 
-                try:
-                    species_string_reactant = cyclic_dict[product['species']]['list'][
-                        cyclic_dict[product['species']]['cyclic_value']]
-                    cyclic_dict[product['species']]['cyclic_value'] += cyclic_dict[product['species']]['cyclic_value']
-                    product_species_string_list.append(
-                        transform_species_string(species_string_reactant, product['characteristics']))
+                    Reactions_For_SBML['reaction_' + str(reaction_number)] = \
+                        construct_single_reaction_for_sbml(reactant_string_list, product_string_list, 10)
 
-                except KeyError:
-                    born_species.append(product)
-
-            if len(born_species) > 0:
-                born_species_string_combinations = construct_born_species(born_species, Species_string_dict)
-                current_state_born = [0] * len(born_species_string_combinations)
-                final_state_born = [0] * len(born_species_string_combinations)
-
-            while True:
-
-                if len(born_species) > 0:
-                    born_species_string_list = next_combination(current_state_born, born_species_string_combinations)
-
-                reaction_rate = extract_reaction_rate({'reactants': reactant_species_string_list,
-                                                       'products': product_species_string_list + born_species_string_list},
-                                                      Reaction_rate_functions['reaction_object'],
-                                                      Parameters_For_SBML)
-
-                assert type(reaction_rate) == str
-
-                Reactions_For_SBML['reaction_' + str(len(Reactions_For_SBML))] = construct_single_reaction_for_sbml(
-                    reactant_species_string_list,
-                    product_species_string_list + born_species_string_list,
-                    reaction_rate)
-
-                if len(born_species) == 0:
-                    break
-                else:
-                    if current_state_born == final_state_born:
-                        break
-
-            if current_state == final_state:
-                break
+    print(Reactions_For_SBML)
+    exit()
 
     return Reactions_For_SBML, Parameters_For_SBML
 
 
 if __name__ == '__main__':
-
     Ref_characteristics_to_object = {
         'young': 1,
         'old': 1,
@@ -353,9 +251,11 @@ if __name__ == '__main__':
                   'Ecoli.old.dead.happy'}
     }
 
+
     def reaction_rate_function_test(*args):
         reaction_dict = args[0]
         return 5
+
 
     Reaction_rate_functions = {
         'reaction_object': reaction_rate_function_test
@@ -365,12 +265,7 @@ if __name__ == '__main__':
         {'re': [('Ecoli', {'young'}, 1)], 'pr': [('Ecoli', {'old'}, 1)]}
     ]
 
-    reactions, parameters = create_all_reactions(Reactions, Species_string_dict, Reaction_rate_functions)
-
-    for key in reactions:
-        print(key, reactions[key])
-
-    #TODO
+    # TODO
     # Ecoli.not_infected.yellow >> Ecoli.red
     # Ecoli.not_infected.blue >> Ecoli.red
 

@@ -1,4 +1,5 @@
 import copy
+import itertools
 
 
 def unite_dictionaries(first_dict, second_dict):
@@ -133,30 +134,14 @@ def create_orthogonal_vector_structure(species):
 def create_species_strings(spe_object, lists_of_definitions):
 
     # Remove empty sets from the list
-    lists_of_definitions = [i for i in lists_of_definitions if i != set()]
-
-    # Defining needed structures
+    lists_of_definitions = [list(i) for i in lists_of_definitions if i != set()]
     set_of_species = set()
-    accumulated_list = [spe_object.get_name()]
-    species_from_characteristic = {}
 
-    # Recursive exponential combination implementation
-    def recursive_combine_properties(i, list_definitions, accumulated_list):
-
-        for j, characteristic in enumerate(list_definitions):
-
-            if j == 0:
-                accumulated_list.append(characteristic)
-            else:
-                accumulated_list[-1] = characteristic
-
-            try:
-                recursive_combine_properties(i + 1, lists_of_definitions[i + 1], copy.deepcopy(accumulated_list))
-            except IndexError:
-                spe = '.'.join(accumulated_list)
-                set_of_species.add(spe)
-
-    recursive_combine_properties(0, lists_of_definitions[0], accumulated_list)
+    for i in itertools.product(*lists_of_definitions):
+        if lists_of_definitions:
+            set_of_species.add(spe_object.get_name() + '.' + '.'.join(i))
+        else:
+            set_of_species.add(spe_object.get_name())
 
     return set_of_species
 

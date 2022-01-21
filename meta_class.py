@@ -1,7 +1,10 @@
 import copy
 
 import meta_class_utils
+from order_operators import *
+from function_rate_code import *
 import reaction_construction_nb
+import function_rate_code
 import itertools
 
 
@@ -103,9 +106,9 @@ class Model:
         # Create reactions for SBML with theirs respective parameters and rates
         # What do I have so far
         # Species_String_Dict and a set of reaction objects in Reactions_Set
-        reaction_construction_nb.create_all_reactions(cls.Reactions_set, cls.Species_string_dict, set())
-
-        print(cls.Species_for_SBML)
+        reaction_construction_nb.create_all_reactions(cls.Reactions_set, cls.Species_string_dict,
+                                                      cls.Ref_object_to_characteristics,
+                                                      cls.Ref_characteristics_to_object)
 
 
 class Reactions:
@@ -138,6 +141,9 @@ class Reactions:
     def __init__(self, reactants, products):
         self.reactants = reactants
         self.products = products
+
+        # Assign default order
+        self.order = Round_Robin_RO
 
         self.rate = Model.Last_rate
         if Model.Last_rate is not None:
@@ -209,15 +215,15 @@ class ParallelSpecies:
         self.list_of_species = list_of_species
 
     def append(self, species):
-        if not isinstance(self, Species):
+        if not isinstance(species, Species):
             raise TypeError('Only Species can be appended')
         self.list_of_species.append(species)
 
     def __or__(self, other):
-        if isinstance(self, Species):
-            self.append(Species)
+        if isinstance(other, Species):
+            self.append(other)
             return self
-        elif isinstance(self, ParallelSpecies):
+        elif isinstance(other, ParallelSpecies):
             return ParallelSpecies(self.list_of_species + other.list_of_species)
         else:
             raise TypeError('Operator must only be used in Species on ParallelSpecies')
@@ -259,7 +265,7 @@ class Species:
             other.append(self)
             return other
         else:
-            ParallelSpecies([self, other])
+            return ParallelSpecies([self, other])
 
     # Creation of reactions using entities ########################
     def __getitem__(self, item):
@@ -426,7 +432,9 @@ def create_properties(number_of_properties=1):
         return tuple(to_return)
 
 
+
 if __name__ == '__main__':
+
 
     Age, Mood, Live = create_properties(3)
     Age.young >> Age.old [10]
@@ -435,6 +443,12 @@ if __name__ == '__main__':
     Human = Age * Mood * Live
     Human(200) # Human.young.sad.live
     Model.compile(Human)
+
+    """
+    A, B, C, D = create_properties(4)
+    A + B >> C + D [20]
+    Model.compile(A | B | C | D)
+    """
 
     # TODO Work on this
     # def rate_for_young(human1, human2):

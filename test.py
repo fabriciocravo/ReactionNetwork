@@ -1,15 +1,7 @@
-import copy
-import itertools
 
-list_of_lists = [
-    ['A', 'B', 'C'],
-    ['Hey', 'Ho'],
-    ['1', '0']
-]
+# deterministic
+f = 'A * A * B * rate'
 
-comb = []
-for i in itertools.product(*list_of_lists):
-    comb.append(i)
-    print(i)
-
-
+# stochastic
+# semantics of stochastic chemical networks - check
+f = 'A * (A - 1)/2 * (A - 2)/3 * B * rate'
