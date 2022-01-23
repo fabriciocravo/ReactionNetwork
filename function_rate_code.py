@@ -255,7 +255,7 @@ def prepare_arguments_for_callable(combination_of_reactant_species, reactant_str
             to_return_dict[argument] = base_dict[argument]
         # If not create a null species to return false to everything
         except KeyError:
-            to_return_dict[argument] = Specific_Species_Operator('$Null', create_properties(1))
+            to_return_dict[argument] = Specific_Species_Operator('$Null', Create(1))
 
     return to_return_dict
 

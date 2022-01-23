@@ -11,6 +11,11 @@ import itertools
 # Easter Egg: I finished the first version on a sunday at the BnF in Paris
 # If anyone is reading this, I highly recommend you study there, it is quite a nice place
 class Simulator:
+    """
+        This is the simulator call
+        It receives the constructed objects and keeps track of the number of 
+    """
+    
     # Basic storage of defined variables for Simulator
     Entity_counter = 0
     Reactions_set = set()
@@ -41,7 +46,7 @@ class Simulator:
         else:
             raise TypeError('Wrong input type')
 
-        '''
+        """
             Here we construct the species for Copasi using their objects
             
             First we extract all the species from all the given objects and add them to a set
@@ -52,7 +57,7 @@ class Simulator:
             
             Also we construct the Species_from_object dictionary
             This dictionary returns the species from an specific object using the object as key
-        '''
+        """
 
         # We name the species according to variables names for convenience
         cls.name_all_involved_species(list_of_species_objects)
@@ -174,7 +179,7 @@ class Reactions:
             product['object'].add_reaction(self)
 
 
-class Reactants:
+class Reacting_Species:
 
     def __getitem__(self, item):
         return Simulator.override_get_item(self, item)
@@ -188,13 +193,13 @@ class Reactants:
 
     def __add__(self, other):
         if isinstance(other, Species):
-            other = Reactants(other, set())
+            other = Reacting_Species(other, set())
         self.list_of_reactants += other.list_of_reactants
         return self
 
     def __rshift__(self, other):
         if isinstance(other, Species):
-            p = Reactants(other, set())
+            p = Reacting_Species(other, set())
         else:
             p = other
 
@@ -292,27 +297,27 @@ class Species:
 
     def __rmul__(self, stoichiometry):
         if type(stoichiometry) == int:
-            r = Reactants(self, set(), stoichiometry)
+            r = Reacting_Species(self, set(), stoichiometry)
         else:
             raise ValueError('Stoichiometry can only be an int')
         return r
 
     def __add__(self, other):
-        r1 = Reactants(self, set())
-        if isinstance(other, Reactants):
+        r1 = Reacting_Species(self, set())
+        if isinstance(other, Reacting_Species):
             r2 = other
         else:
-            r2 = Reactants(other, set())
+            r2 = Reacting_Species(other, set())
         return r1 + r2
 
     def __radd__(self, other):
         Species.__add__(self, other)
 
     def __rshift__(self, other):
-        myself = Reactants(self, set())
+        myself = Reacting_Species(self, set())
 
         if isinstance(other, Species):
-            p = Reactants(other, set())
+            p = Reacting_Species(other, set())
         elif other == 0:
             exit()
         else:
@@ -337,7 +342,7 @@ class Species:
 
             self.add_characteristic(characteristic)
 
-        return Reactants(self, characteristics)
+        return Reacting_Species(self, characteristics)
 
     def check_for_commands(self, characteristic):
         if characteristic == 'characteristics' or characteristic == 'characteristic':
@@ -392,7 +397,7 @@ class Species:
         self._characteristics = set()
         self._references = {self}
 
-        # This is necessary for the empty objects generated when we perform a multiplication with more than 2 Properties
+        # This is necessary for the empty objects generated when we perform multiplication with more than 2 Properties
         self.first_characteristic = None
 
         # Each object stores the reactions it is involved in
@@ -441,7 +446,7 @@ class Species:
 
 
 # Property Call to return several properties as called
-def create_properties(number_of_properties=1):
+def Create(number_of_properties=1):
     to_return = []
     for i in range(number_of_properties):
         Simulator.Entity_counter += 1
@@ -454,12 +459,12 @@ def create_properties(number_of_properties=1):
         return tuple(to_return)
 
 
-S0 = create_properties(1)
+S0 = Create(1)
 S0.name('S0')
 
 if __name__ == '__main__':
 
-    Age, Mood, Live = create_properties(3)
+    Age, Mood, Live = Create(3)
 
 
     def rate(human1):
@@ -476,7 +481,7 @@ if __name__ == '__main__':
     # Human(200)  # Human.young.sad.live
     # Simulator.compile(Human, type_of_model='stochastic')
 
-    P = create_properties(1)
+    P = Create(1)
 
     Age.young >> Age.old[rate]
     Mood.sad >> Mood.happy[3]
@@ -488,7 +493,7 @@ if __name__ == '__main__':
 
 
     """
-    A, B, C, D = create_properties(4)
+    A, B, C, D = Create(4)
     A(100) + B(100) >> C + D [20]
     print(Simulator.compile(A | B | C | D, type_of_model='stochastic'))
     """
