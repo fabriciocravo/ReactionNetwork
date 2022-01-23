@@ -181,14 +181,12 @@ def basic_kinetics_string(reactants, reaction_rate, Parameters_For_SBML, type_of
             kinetics_string += stochastic_string(name, number)
         elif type_of_model.lower() == 'deterministic':
             kinetics_string += deterministic_string(name, number)
+        kinetics_string += ' * '
 
     rate_str = 'rate_' + str(len(Parameters_For_SBML))
     Parameters_For_SBML[rate_str] = reaction_rate
 
-    if kinetics_string == '':
-        kinetics_string += rate_str
-    else:
-        kinetics_string += ' * ' + rate_str
+    kinetics_string += rate_str
 
     return kinetics_string
 

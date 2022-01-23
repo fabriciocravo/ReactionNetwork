@@ -471,16 +471,16 @@ if __name__ == '__main__':
 
     P = create_properties(1)
 
+    """
     Age.young >> Age.old[rate]
     Mood.sad >> Mood.happy[3]
     # Live.live >> Live.dead[40]
     Human = Age * Mood
-    S0 >> Human[10]
+    S0 >> Human [10]
     Human(200)  # Human.young.sad.live
     Model.compile(Human | P, type_of_model='stochastic')
+    """
 
-    """
     A, B, C, D = create_properties(4)
-    A + B >> C + D [20]
-    Model.compile(A | B | C | D)
-    """
+    A(100) + B(100) >> C + D [20]
+    Model.compile(A | B | C | D, type_of_model='stochastic')
