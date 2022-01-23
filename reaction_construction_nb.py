@@ -187,10 +187,11 @@ def get_involved_species(reaction, Species_string_dict):
 
 def create_all_reactions(Reactions, Species_string_dict,
                          Ref_object_to_characteristics,
-                         Ref_characteristics_to_object):
+                         Ref_characteristics_to_object,
+                         type_of_model):
+
     Reactions_For_SBML = {}
     Parameters_For_SBML = {}
-    reaction_number = 0
 
     for reaction in Reactions:
 
@@ -210,16 +211,11 @@ def create_all_reactions(Reactions, Species_string_dict,
                                                                                  Ref_characteristics_to_object)
 
                 for product_string_list in iterator_for_combinations(product_species_species_string_combination_list):
-                    reaction_number += reaction_number
-                    fr.extract_reaction_rate(combination_of_reactant_species, reactant_string_list
-                                             , lambda x: x, Parameters_For_SBML)
-                    exit()
+                    rate_string = fr.extract_reaction_rate(combination_of_reactant_species, reactant_string_list
+                                             , reaction.rate, Parameters_For_SBML, type_of_model)
 
-                    Reactions_For_SBML['reaction_' + str(reaction_number)] = \
-                        construct_single_reaction_for_sbml(reactant_string_list, product_string_list, 10)
-
-    print(Reactions_For_SBML)
-    exit()
+                    Reactions_For_SBML['reaction_' + str(len(Reactions_For_SBML))] = \
+                        construct_single_reaction_for_sbml(reactant_string_list, product_string_list, rate_string)
 
     return Reactions_For_SBML, Parameters_For_SBML
 

@@ -8,6 +8,8 @@ import function_rate_code
 import itertools
 
 
+# Easter Egg: I finished the first version on a sunday at the BnF in Paris
+# If anyone is reading this, I highly recommend you study there, it is quite a nice place
 class Model:
     # Basic storage of defined variables for model
     Entity_counter = 0
@@ -34,7 +36,7 @@ class Model:
             species.name(variable_name)
 
     @classmethod
-    def compile(cls, species_to_simulate):
+    def compile(cls, species_to_simulate, type_of_model):
         # TODO no events for now
         # If there is only a single species
         if isinstance(species_to_simulate, Species):
@@ -106,9 +108,17 @@ class Model:
         # Create reactions for SBML with theirs respective parameters and rates
         # What do I have so far
         # Species_String_Dict and a set of reaction objects in Reactions_Set
-        reaction_construction_nb.create_all_reactions(cls.Reactions_set, cls.Species_string_dict,
-                                                      cls.Ref_object_to_characteristics,
-                                                      cls.Ref_characteristics_to_object)
+        Reactions_For_SBML, Parameters_For_SBML = reaction_construction_nb.create_all_reactions(cls.Reactions_set,
+                                                                                                cls.Species_string_dict,
+                                                                                                cls.Ref_object_to_characteristics,
+                                                                                                cls.Ref_characteristics_to_object,
+                                                                                                type_of_model)
+
+        for parameters in Parameters_For_SBML:
+            print(parameters, Parameters_For_SBML[parameters])
+
+        for reaction in Reactions_For_SBML:
+            print(reaction, Reactions_For_SBML[reaction])
 
 
 class Reactions:
@@ -163,18 +173,19 @@ class Reactants:
         return Model.override_get_item(self, item)
 
     def __init__(self, object_reference, characteristics, stoichiometry=1):
-        self.list_of_reactants = [{'object': object_reference, 'characteristics': characteristics,
-                                   'stoichiometry': stoichiometry}]
+        if object_reference.get_name() == 'S0' and characteristics == set():
+            self.list_of_reactants = []
+        else:
+            self.list_of_reactants = [{'object': object_reference, 'characteristics': characteristics,
+                                       'stoichiometry': stoichiometry}]
 
     def __add__(self, other):
         if isinstance(other, Species):
             other = Reactants(other, set())
-
         self.list_of_reactants += other.list_of_reactants
         return self
 
     def __rshift__(self, other):
-
         if isinstance(other, Species):
             p = Reactants(other, set())
         else:
@@ -190,6 +201,7 @@ class Reactants:
         species_object = self.list_of_reactants[0]['object']
         characteristics = self.list_of_reactants[0]['characteristics']
         species_object.add_quantities(characteristics, quantity)
+        return self
 
     def __getattr__(self, characteristic):
 
@@ -294,6 +306,8 @@ class Species:
 
         if isinstance(other, Species):
             p = Reactants(other, set())
+        elif other == 0:
+            exit()
         else:
             p = other
 
@@ -329,6 +343,7 @@ class Species:
     # Adding counts to species
     def __call__(self, quantity):
         self.add_quantities('std$', quantity)
+        return self
 
     def add_quantities(self, characteristics, quantity):
         '''
@@ -432,27 +447,40 @@ def create_properties(number_of_properties=1):
         return tuple(to_return)
 
 
+S0 = create_properties(1)
+S0.name('S0')
 
 if __name__ == '__main__':
 
-
     Age, Mood, Live = create_properties(3)
-    Age.young >> Age.old [10]
-    Mood.sad >> Mood.happy [3]
-    Live.live >> Live.dead [40]
-    Human = Age * Mood * Live
-    Human(200) # Human.young.sad.live
-    Model.compile(Human)
+
+
+    def rate(human1):
+        if human1.happy:
+            return 10
+        else:
+            return 5
+
+
+    # Age.young >> Age.old[rate]
+    # Mood.sad >> Mood.happy[3]
+    # Live.live >> Live.dead[40]
+    # Human = Age * Mood
+    # Human(200)  # Human.young.sad.live
+    # Model.compile(Human, type_of_model='stochastic')
+
+    P = create_properties(1)
+
+    Age.young >> Age.old[rate]
+    Mood.sad >> Mood.happy[3]
+    # Live.live >> Live.dead[40]
+    Human = Age * Mood
+    S0 >> Human[10]
+    Human(200)  # Human.young.sad.live
+    Model.compile(Human | P, type_of_model='stochastic')
 
     """
     A, B, C, D = create_properties(4)
     A + B >> C + D [20]
     Model.compile(A | B | C | D)
     """
-
-    # TODO Work on this
-    # def rate_for_young(human1, human2):
-    #   if human1.old:
-    #       return f'5*{human1}*{human2}'
-    #   else:
-    #       return 6
