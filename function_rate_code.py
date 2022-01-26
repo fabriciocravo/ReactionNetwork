@@ -3,7 +3,9 @@ import reaction_construction_nb as rc
 
 
 class Bool_Override:
-
+    """
+        This class override the boolean operator of all function rate objects
+    """
     def __bool__(self):
         # Return false if the species does not exist in reaction
         if self.species_string == '$Null':
@@ -20,7 +22,19 @@ class Bool_Override:
 
 
 class Specific_Species_Operator(Bool_Override):
+    """
+        Here we create a new species object. It is called specific because it refers to specific
+        species strings
 
+        The previous object was generic - Ecoli would refer to ALL Ecoli
+        Here we deal with specific species like Ecoli.blue.happy.alive
+
+        We override the operators to allow us to write is Ecoli.alive on function rate definition
+
+        Operators use the constructor and what is inside it to define themselves
+        After that the boolean method is called on the constructed object
+        Thus allowing to set rates based on the specific characteristics of the string created in the beginning
+    """
     def __init__(self, species_string, species_object):
         self.species_string = species_string
         self._stocked_characteristics = set()
@@ -38,7 +52,9 @@ class Specific_Species_Operator(Bool_Override):
 
 
 class Concatenate_Specific_Species_Operator:
-
+    """
+        This concatenates species strings for reactions with more than one species
+    """
     def __init__(self, list_of_species_operators):
         self.list_of_species_operators = list_of_species_operators
 
@@ -51,7 +67,9 @@ class Concatenate_Specific_Species_Operator:
 
 
 class Group_Operator_Base:
-
+    """
+        Base for All and Any operators. Those are used to refer to more than one species
+    """
     def __init__(self, sso):
         if isinstance(sso, Specific_Species_Operator):
             self._concatenate_sso_object = [sso]
@@ -77,7 +95,15 @@ class Any(Bool_Override, Group_Operator_Base):
 
 
 class IsInstance(Bool_Override):
-
+    """
+        Check if a specific species references another.
+        Example:
+            Something = Age*Live
+            IsInstance(Something, Age) = TRUE
+            IsInstance(Something, Live) = TRUE
+            IsInstance(Something, What) = FALSE
+        It does this by overriding the Boolean method after an object has been constructed
+    """
     @staticmethod
     def contains_reference(sso, reference):
 
@@ -169,7 +195,11 @@ def extract_reaction_rate(combination_of_reactant_species, reactant_string_list
 
 
 def basic_kinetics_string(reactants, reaction_rate, Parameters_For_SBML, type_of_model):
-
+    """
+        Just assign basic kinetics string based on the received reactans and rate
+        Parameters_For_SBML is for the construction of the model later
+        Type of model is stochastic or deterministic - Used to determine which expression to use
+    """
     counts = rc.count_string_dictionary(reactants)
 
     if type_of_model.lower() not in ['stochastic', 'deterministic']:
@@ -194,7 +224,9 @@ def basic_kinetics_string(reactants, reaction_rate, Parameters_For_SBML, type_of
 # TODO ask about this, make sure it is right
 # TODO really important !!!!!!!
 def stochastic_string(reactant_name, number):
-
+    """
+        In the form S * (S - 1)/2 * .....
+    """
     to_return_string = ''
     for i in range(number):
         if i == 0:
@@ -205,7 +237,9 @@ def stochastic_string(reactant_name, number):
 
 
 def deterministic_string(reactant_name, number):
-
+    """
+        Just the reactants strings multiplied
+    """
     to_return_string = ''
     for i in range(number):
         if i == 0:
@@ -216,6 +250,14 @@ def deterministic_string(reactant_name, number):
 
 
 def prepare_arguments_for_callable(combination_of_reactant_species, reactant_string_list, rate_function_arguments):
+    """
+        combination_of_reactant_species : reactant species OBJECTS involved in the reaction
+        reactant_string_list : reactant species STRINGS involved in the reaction
+        rate_function_arguments : arguments received by the rate function
+
+        This function extracts the requested arguments by the rate function for a given reaction
+        So then it can be given to it using **kwargs
+    """
     base_dict = {}
     species_counter = {}
     species_lists = {}

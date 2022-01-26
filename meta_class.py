@@ -13,7 +13,9 @@ import itertools
 class Simulator:
     """
         This is the simulator call
-        It receives the constructed objects and keeps track of the number of 
+        It receives the constructed objects and keeps track of the number of number of base species created
+        It does so for automatic naming before compilation
+        After compilation the species receive the variable name
     """
     
     # Basic storage of defined variables for Simulator
@@ -26,11 +28,18 @@ class Simulator:
 
     @classmethod
     def override_get_item(cls, object_to_return, item):
+        """
+            Due to priority in python the item is stored before the reaction
+            So it is stored in the Simulator level and passed to the reaction object in the end
+        """
         cls.Last_rate = item
         return object_to_return
 
     @classmethod
     def name_all_involved_species(cls, list_of_species_objects):
+        """
+            Name species automatically acording to their variable names
+        """
         for species in list_of_species_objects:
             variable_name = [k for k, v in globals().items() if v == species][0]
             species.name(variable_name)
@@ -134,9 +143,17 @@ class Simulator:
 
 
 class Reactions:
+    """
+        This is the Reaction class. It contains the reactants, products, rate and order
+        Reactions are created with the >> operator. Each reaction is stored in all involved objects
+    """
 
     @staticmethod
     def __create_reactants_string(list_of_reactants):
+        """
+            Just a simple way to print reactions for debbuging
+            Not relevant for simulation
+        """
         reaction_string = ''
         for i, r in enumerate(list_of_reactants):
             if r['stoichiometry'] > 1:
@@ -144,7 +161,7 @@ class Reactions:
             else:
                 reaction_string += str(r['object'])
 
-            reaction_string += "." + "_".join(r['characteristics'])
+            reaction_string += "." + ".".join(r['characteristics'])
 
             if i != len(list_of_reactants) - 1:
                 reaction_string += ' '
@@ -178,9 +195,16 @@ class Reactions:
         for product in products:
             product['object'].add_reaction(self)
 
+    def set_rate(self, rate):
+        self.rate = rate
+
 
 class Reacting_Species:
-
+    """
+        If a species is involved in a reaction this object is created
+        It contains the species object reference, the characteristics involved in the reaction and finally the stoichiometry
+        It adds up by appending elements to a list
+    """
     def __getitem__(self, item):
         return Simulator.override_get_item(self, item)
 
@@ -216,10 +240,6 @@ class Reacting_Species:
         return self
 
     def __getattr__(self, characteristic):
-
-        """
-            Test
-        """
         for reactant in self.list_of_reactants:
 
             species_object = reactant['object']
@@ -234,7 +254,11 @@ class Reacting_Species:
 
 
 class ParallelSpecies:
-
+    """
+        Class to simulate several species at the same time
+        It is basically a list of species
+        Species become this using the | operator
+    """
     def __init__(self, list_of_species):
         self.list_of_species = list_of_species
 
@@ -254,7 +278,13 @@ class ParallelSpecies:
 
 
 class Species:
-
+    """
+        Fundamental class
+        Contains the characteristics, the species name, the reactions it is involved in
+        and finally the other species it references
+        Objects store all the basic information necessary to create an SBML file and construct a model
+        So we construct the species through reactions and __getattr__ to form a model
+    """
     # Get data from species for debugging Simulators
     def __str__(self):
         return self._name
@@ -266,7 +296,7 @@ class Species:
                 print(reaction)
 
     def show_characteristics(self):
-        print(str(self) + ':')
+        print(str(self) + ' has the following characteristics referenced:')
         for i, reference in enumerate(self.get_references()):
             if reference.get_characteristics():
                 print(str(reference) + ': ', end='')
@@ -328,9 +358,14 @@ class Species:
 
     # Adding characteristics to an Entity or Property ####################
     def __getattr__(self, characteristic):
+        """
+            characteristic: string of characteristic
+            We add characteristics using the following manner Species.characteristic
+            If it is the first time is called we add it to the set of characteristics
+            Second time just creates a Reacting_Species for reaction construction
 
-        # First check for commands
-        self.check_for_commands(characteristic)
+            IMPORTANT - DON'T USE DEEPCOPY - IT DOES NOT WORK WITH __getattr__
+        """
 
         characteristics_from_references = meta_class_utils.unite_characteristics(self.get_references())
         characteristics = {characteristic}
@@ -343,14 +378,6 @@ class Species:
             self.add_characteristic(characteristic)
 
         return Reacting_Species(self, characteristics)
-
-    def check_for_commands(self, characteristic):
-        if characteristic == 'characteristics' or characteristic == 'characteristic':
-            self.show_characteristics()
-        elif characteristic == 'reactions' or characteristic == 'reaction':
-            self.show_reactions()
-        elif characteristic == 'references' or characteristic == 'reference':
-            self.show_references()
 
     # Adding counts to species
     def __call__(self, quantity):
@@ -381,7 +408,11 @@ class Species:
 
     # Creation of other objects through multiplication ##################
     def __mul__(self, other):
-
+        """
+            Multiplications are used to construct more complex species
+            We do not concatenate characteristics. This keeps the structure intact for reaction construction
+            Instead we combine the sets of references. Every processes references itself
+        """
         Simulator.Entity_counter += 1
         name = 'E' + str(Simulator.Entity_counter)
         new_entity = Species(name)
@@ -405,8 +436,6 @@ class Species:
 
         # This will store the quantities relating to the species counts
         self._species_counts = []
-
-    # Encapsulation of Species ########################################
 
     def name(self, name):
         self._name = name
@@ -447,6 +476,10 @@ class Species:
 
 # Property Call to return several properties as called
 def Create(number_of_properties=1):
+    """
+        A function to create multiple species at once
+        Reduce the number of lines
+    """
     to_return = []
     for i in range(number_of_properties):
         Simulator.Entity_counter += 1
@@ -458,14 +491,16 @@ def Create(number_of_properties=1):
     else:
         return tuple(to_return)
 
-
+"""
+    The Zero is defined here
+    Used this for reactions that result in nothing or come from nothing
+"""
 S0 = Create(1)
 S0.name('S0')
 
 if __name__ == '__main__':
 
     Age, Mood, Live = Create(3)
-
 
     def rate(human1):
         if human1.happy:
@@ -490,6 +525,8 @@ if __name__ == '__main__':
     S0 >> Human [10]
     Human(200)  # Human.young.sad.live
     Simulator.compile(Human | P, type_of_model='stochastic')
+
+    exit()
 
 
     """

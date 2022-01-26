@@ -3,7 +3,11 @@ import meta_class_utils
 
 
 class __Operator_Base:
-
+    """
+        This is the order operator base. It contains some functions that can be useful for all operators
+        It also overrides the getitem method so we can use:
+        Operator[Reaction] to assign an order to the reaction
+    """
     # Assign order structure
     def __getitem__(self, item):
         item.order = self
@@ -13,7 +17,18 @@ class __Operator_Base:
     def transform_species_string(species_string, characteristics_to_transform,
                                  ref_object_to_characteristics,
                                  ref_characteristics_to_object):
+        """
+            species_string : A string associated with a species in the form of Species.c1.c2.c3
+            characteristics_to_transform : Characteristics received by the species object in the product
+            refs : orthogonal structure - get the object referring to the characteristic and the characteristics
+            associated with the object
 
+            For the products we take the referenced characteristic and every string that does not have that characteristic
+            will have it transformed to become a reaction
+
+            We only transform the characteristics from the same base_object, respecting the structure
+            described on the paper
+        """
         species_to_return = deepcopy(species_string)
         for characteristic in characteristics_to_transform:
             replaceable_characteristics = ref_object_to_characteristics[ref_characteristics_to_object[characteristic]]
@@ -56,7 +71,23 @@ class __Operator_Base:
 
 
 class __Round_Robin_Base(__Operator_Base):
+    """
+        Here we have the implementation of the round robin order it goes like this:
 
+        2*Ecoli >> 4*Ecoli
+
+        Since an Ecoli is a generic object that refers to all types of Ecoli
+        This object refers to multiple reactions and to multiple strings
+        Therefore we follow this rule to know which string goes where:
+        1 Ecoli reactant >> 1 Ecoli product
+        2 Ecoli reactant >> 2 Ecoli product
+        1 Ecoli reactant >> 3 Ecoli product
+        2 Ecoli reactant >> 4 Ecoli product
+        This is a cycle (round robin) between the reactants to be assigned positions in the product
+        The products will keep the characteristics of the reactants except if stated otherwise with .
+        For completely new species (no reactant of the same species) we use ALL possible combinations
+        For only the default option see the code bellow
+    """
     def __call__(self, order_dictionary, product_species,
                  Species_string_dictionary,
                  Ref_object_to_characteristics,
@@ -93,7 +124,10 @@ Round_Robin_RO = __Round_Robin_Base()
 
 
 class __RR_Default_Base(__Operator_Base):
-
+    """
+        Only default options for born species (no reference in reactant)
+        See comment above for clarification
+    """
     # Here is the default order requested by Thomas
     def __call__(self, order_dictionary, product_species,
                  Species_string_dictionary,

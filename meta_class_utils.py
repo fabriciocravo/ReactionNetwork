@@ -3,6 +3,11 @@ import itertools
 
 
 def unite_dictionaries(first_dict, second_dict):
+    """
+        first_dict = first dictionary
+        second_dict = second dictionary
+        Just fuse both dictionaries based on the keys. First key value takes precedence
+    """
     for key in second_dict:
         try:
             first_dict[key].union(second_dict[key])
@@ -11,11 +16,17 @@ def unite_dictionaries(first_dict, second_dict):
 
 
 def combine_references(species1, species2):
+    """
+        Combine the sets of references of two species
+    """
     return species1.get_references().union(species2.get_references())
 
 
 def check_orthogonality_between_references(references):
-
+    """
+        Check if base species do not have characteristics in common
+        The sets of characteristics must be independent for BASE SPECIES
+    """
     for i, reference1 in enumerate(references):
         for j, reference2 in enumerate(references):
 
@@ -27,7 +38,12 @@ def check_orthogonality_between_references(references):
 
 
 def complete_characteristics_with_first_values(spe_object, characteristics, characteristics_to_object):
-
+    """
+        This creates a string with the species object name and the set of all first characteristics added
+        to it's base species used to construct it
+        It allows us to search for the proper string in the model using the result of this function
+        It's used to set the quantities using the call method in Species and Reacting_Species
+    """
     if characteristics == 'std$':
         characteristics = set()
 
@@ -48,6 +64,10 @@ def complete_characteristics_with_first_values(spe_object, characteristics, char
 
 
 def extract_characteristics_from_string(species_string):
+    """
+        Species are named for the SBML as species_name.characteristic1.characteristic2
+        So this transforms them into a set
+    """
     return set(species_string.split('.'))
 
 
@@ -131,10 +151,18 @@ def create_orthogonal_vector_structure(species):
     return Ref_object_to_characteristics, Ref_characteristics_to_object
 
 
-def create_species_strings(spe_object, lists_of_definitions):
+def create_species_strings(spe_object, sets_of_characteristics):
+    """
+        spe_object : received species object
+        sets_off_characteristics : all sets of characteristics from the referenced objects
 
-    # Remove empty sets from the list
-    lists_of_definitions = [list(i) for i in lists_of_definitions if i != set()]
+        This function combines the species name with all the characteristics of it's references.
+        This way it creates the strings that will be used for the SBML
+        All possible combinations are created, with no intersections between characteristics of
+        a same referenced species
+    """
+    # Remove empty sets from the list and transform sets in lists
+    lists_of_definitions = [list(i) for i in sets_of_characteristics if i != set()]
     set_of_species = set()
 
     for i in itertools.product(*lists_of_definitions):
