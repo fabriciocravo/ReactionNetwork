@@ -4,13 +4,13 @@ This is the main code responsible for constructing the necessary tools for the c
 
 The model consists of combining species through multiplication to create more complex ones. Each species can only contain one set of characteristics and they will be used as a base for the reactions.
 
-To create more complex species one must use multiplication. This way the species will be able to access characteristics all sets of characteristics from the previous species. It is important to say that the characteristics will not be directly added to the more complex species set, but instead, the more complex species will point to the ones that construct it using a set of references. Moreover, each species points to itself. Therefore it will have a number of sets of characteristics associated with it equal to the number of elements multiplied to form it + one (itself).
+To create more complex species one must use multiplication. This way the species will be able to access characteristics all sets of characteristics from the previous species through an object variable called _references. Therefore, the characteristics will not be directly added to the more complex species set, but instead, the more complex species will point to the ones that construct it using a set of references. Moreover, each species points to itself. Therefore it will have a number of sets of characteristics associated with it equal to the number of elements multiplied to form it + one (itself).
 
 The sets must be independent, which means that all sets of characteristics must not contain a characteristic in common.
 
 To add characteristics just use Species_Object. characteristic, if it has never been used it will be added to the object. For reactions - Just type Species_Base.characteristics + Species_base ... >> Species_base. Once the model compiles all species that have been created for this base species will be considered in the reaction. This works for more complex species and reactions.
 
-Regarding the reactants, the dot is used to filter what characteristics will be present on the reactants' species. For the products, this will be the characteristic to be transformed. Wich means that all characteristics that belong to the same set will be transformed into it.
+Regarding the reactants, the dot is used to filter what characteristics will be present on the reactants' species. For the products, this will be the characteristic to be transformed. Which means that all characteristics that belong to the same set will be transformed into it.
 
 # SCRIPT meta_class.py
 
