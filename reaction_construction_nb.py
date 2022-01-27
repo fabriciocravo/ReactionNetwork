@@ -40,102 +40,27 @@ def copy_reaction(reaction):
     return reaction_copy
 
 
-def separate_into_orthogonal_reactions(Reactions, Ref_characteristics_to_object, with_products = False):
-    """
-        This function separates reactions into completely orthogonal ones
-        For instance, lets say red and blue belong to the same set of Species Characteristics
-
-        Age.young >> Age.old [3]
-        Mood.sad >> Mood.happy [5]
-        Human = Age*Mood
-        Human.blue.yellow >> Human.red  [20]
-
-        This would mean Human.blue >> Human.red and Human.yellow >> Human.red
-        This function creates two new reaction objects with that
-        This function was designed so a user can reference multiple characteristics from the same Species
-        To group reactions
-
-        It does by transforming the reactions in a list and reading two reactions if there is ever
-        a reference to two characteristics that belong to the same Species
-
-        It works in a similar fashion for products. Generating both reactions
-    """
-    Reaction_List = list(Reactions)
-
-    cont_while = True
-    while cont_while:
-
-        reaction = Reaction_List.pop(0)
-
-        for i, reactant in enumerate(reaction.reactants):
-            characteristics = reactant['characteristics']
-
-            check_for_duplicates = {}
-            for cha in characteristics:
-
-                try:
-                    old_cha = check_for_duplicates[Ref_characteristics_to_object[cha]]
-
-                    # DEEP COPY DOES NOT WORK DIRECTLY, WE NEED TO CREATE A NEW OBJECT
-                    reaction1 = copy_reaction(reaction)
-                    reaction2 = copy_reaction(reaction)
-
-                    reaction1.reactants[i]['characteristics'].remove(old_cha)
-                    reaction2.reactants[i]['characteristics'].remove(cha)
-
-                    Reaction_List.append(reaction1)
-                    Reaction_List.append(reaction2)
-
-                    break
-
-                except KeyError:
-                    check_for_duplicates[Ref_characteristics_to_object[cha]] = cha
-
-            cont_while = False
-
-    if not with_products:
-        return set(Reaction_List)
-
-    cont_while = True
-    while cont_while:
-
-        reaction = Reaction_List.pop(0)
-
-        for i, product in enumerate(reaction.products):
-            characteristics = product['characteristics']
-
-            check_for_duplicates = {}
-            for cha in characteristics:
-
-                try:
-                    old_cha = check_for_duplicates[Ref_characteristics_to_object[cha]]
-
-                    # DEEP COPY DOES NOT WORK DIRECTLY, WE NEED TO CREATE A NEW OBJECT
-                    reaction1 = copy_reaction(reaction)
-                    reaction2 = copy_reaction(reaction)
-
-                    reaction1.products[i]['characteristics'].remove(old_cha)
-                    reaction2.products[i]['characteristics'].remove(cha)
-
-                    Reaction_List.append(reaction1)
-                    Reaction_List.append(reaction2)
-
-                    break
-
-                except KeyError:
-                    check_for_duplicates[Ref_characteristics_to_object[cha]] = cha
-
-            cont_while = False
-
-    return set(Reaction_List)
-
-
 def check_for_invalid_reactions(Reactions, Ref_characteristics_to_object):
     """
-        Alternative to orthogonal reactions. Disallow ambiguous meaning
-        Both will be left in the code to facilitate those who wish to change between then
+        If a call references two characteristics from the same species it would result in nothing being called
+        Like Ecoli.live.dead - (assuming live and dead belong from the same species)
+        If that ever happens we just pop an error a
     """
     for reaction in Reactions:
+        for reactant in reaction.reactants:
+
+            check_for_duplicates = {}
+            for cha in reactant['characteristics']:
+
+                # Ok I love try catches for checking if something is in a dict. Don't judge me
+                try:
+                    check_for_duplicates[Ref_characteristics_to_object[cha]]
+                    raise TypeError('Illegal reaction, there is a product with multiple '
+                                    'characteristics from the same Species referenced \n'
+                                    'Please divide the reaction accordingly')
+                except KeyError:
+                    check_for_duplicates[Ref_characteristics_to_object[cha]] = cha
+
         for product in reaction.products:
 
             check_for_duplicates = {}
@@ -145,7 +70,8 @@ def check_for_invalid_reactions(Reactions, Ref_characteristics_to_object):
                 try:
                     check_for_duplicates[Ref_characteristics_to_object[cha]]
                     raise TypeError('Illegal reaction, there is a product with multiple '
-                                    'characteristics from the same Species referenced')
+                                    'characteristics from the same Species referenced \n'
+                                    'Please divide the reaction accordingly')
                 except KeyError:
                     check_for_duplicates[Ref_characteristics_to_object[cha]] = cha
 
@@ -272,6 +198,7 @@ def get_involved_species(reaction, Species_string_dict):
     species_for_reactant = []
 
     for reactant in reaction.reactants:
+        flag_absent_reactant = False
         for _ in range(reactant['stoichiometry']):
 
             species_for_reactant = []
@@ -281,6 +208,12 @@ def get_involved_species(reaction, Species_string_dict):
                 if reactant['object'] in species.get_references():
                     species_for_reactant.append({'object': species,
                                                  'characteristics': reactant['characteristics']})
+                    flag_absent_reactant = True
+
+        if not flag_absent_reactant:
+            raise TypeError(f'Species {reactant["object"]} was not found in model \n'
+                            f'For reaction {reaction} \n'
+                            f'Please add the species or remove the reaction')
 
         reactant_species_combination_list.append(species_for_reactant)
 
@@ -288,13 +221,22 @@ def get_involved_species(reaction, Species_string_dict):
 
 
 def create_all_reactions(Reactions, Species_string_dict,
-                         Ref_object_to_characteristics,
                          Ref_characteristics_to_object,
                          type_of_model):
+    """
+        This function creates all reactions
+        Returns the Reactions_For_SBML and Parameters_For_SBML dictionary
+        Those will be used by another module to create the SBML file
+
+        Reactions: Reactions objects constructed by the meta_class module
+        Species_string_dict: Species object keys and respective species strings values
+        Ref_characteristics_to_object: Characteristics as keys objects as values
+        type_of_model: stochastic or deterministic
+    """
+
     Reactions_For_SBML = {}
     Parameters_For_SBML = {}
 
-    Reactions = separate_into_orthogonal_reactions(Reactions, Ref_characteristics_to_object)
     check_for_invalid_reactions(Reactions, Ref_characteristics_to_object)
 
     for reaction in Reactions:
@@ -312,7 +254,6 @@ def create_all_reactions(Reactions, Species_string_dict,
 
                 product_species_species_string_combination_list = reaction.order(order_structure, product_object_list,
                                                                                  Species_string_dict,
-                                                                                 Ref_object_to_characteristics,
                                                                                  Ref_characteristics_to_object)
 
                 for product_string_list in iterator_for_combinations(product_species_species_string_combination_list):
@@ -333,12 +274,6 @@ if __name__ == '__main__':
         'dead': 2,
         'sad': 3,
         'happy': 3
-    }
-
-    Ref_object_to_characteristics = {
-        1: {'young', 'old'},
-        2: {'alive', 'dead'},
-        3: {'sad', 'happy'}
     }
 
     Species_string_dict = {

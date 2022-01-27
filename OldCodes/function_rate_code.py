@@ -51,6 +51,49 @@ class Specific_Species_Operator(Bool_Override):
         self._stocked_characteristics.add(characteristic)
 
 
+class Concatenate_Specific_Species_Operator:
+    """
+        This concatenates species strings for reactions with more than one species
+    """
+    def __init__(self, list_of_species_operators):
+        self.list_of_species_operators = list_of_species_operators
+
+    def __getattr__(self, item):
+        if len(self.list_of_species_operators) > 1:
+            raise TypeError("Error: Two more species were referenced as one. \n" +
+                            "Please use All() or Any()")
+        self.list_of_species_operators[0].__getattr__(item)
+        return self
+
+
+class Group_Operator_Base:
+    """
+        Base for All and Any operators. Those are used to refer to more than one species
+    """
+    def __init__(self, sso):
+        if isinstance(sso, Specific_Species_Operator):
+            self._concatenate_sso_object = [sso]
+        elif isinstance(sso, Concatenate_Specific_Species_Operator):
+            self._concatenate_sso_object = sso.list_of_species_operators
+
+    def __getattr__(self, item):
+        for sso_object in self._concatenate_sso_object:
+            sso_object.add(item)
+        return self
+
+
+class All(Bool_Override, Group_Operator_Base):
+
+    def __bool__(self):
+        return all([bool(sso_object) for sso_object in self._concatenate_sso_object])
+
+
+class Any(Bool_Override, Group_Operator_Base):
+
+    def __bool__(self):
+        return any([bool(sso_object) for sso_object in self._concatenate_sso_object])
+
+
 class IsInstance(Bool_Override):
     """
         Check if a specific species references another.
@@ -74,15 +117,35 @@ class IsInstance(Bool_Override):
         self._reference = reference
         if isinstance(sso, Specific_Species_Operator):
             self._concatenate_sso_object = [sso]
-        else:
-            raise TypeError('Specific_Species_Operator')
+        elif isinstance(sso, Concatenate_Specific_Species_Operator):
+            self._concatenate_sso_object = sso.list_of_species_operators
+        elif isinstance(sso, All):
+            self._concatenate_sso_object = sso._concatenate_sso_object
+            self._operator = 'All'
+        elif isinstance(sso, Any):
+            self._concatenate_sso_object = sso._concatenate_sso_object
+            self._operator = 'Any'
 
     def __bool__(self):
         if not self._operator:
             if len(self._concatenate_sso_object) > 1:
-                raise TypeError('IsInstance is only used for single species')
+                raise TypeError('IsInstance is only used for single species. Please use all or any')
             if self.contains_reference(self._concatenate_sso_object[0], self._reference):
                 return True
+
+        # All code
+        if self._operator == 'All':
+            for sso in self._concatenate_sso_object:
+                if not self.contains_reference(sso, self._reference):
+                    return False
+            return True
+
+        # Any Code
+        if self._operator == 'Any':
+            for sso in self._concatenate_sso_object:
+                if self.contains_reference(sso, self._reference):
+                    return True
+            return False
 
 
 def extract_reaction_rate(combination_of_reactant_species, reactant_string_list
@@ -118,19 +181,14 @@ def extract_reaction_rate(combination_of_reactant_species, reactant_string_list
                                                          rate, Parameters_For_SBML, type_of_model)
         elif type(rate) == str:
             return rate
-        elif rate is None:
-            raise TypeError('There is a reaction rate missing for the following reactants: \n'
-                            + str(reactant_string_list))
+
         else:
             raise TypeError('The function return a non-valid value')
 
     elif type(reaction_rate_function) == str:
         return reaction_rate_function
-    elif reaction_rate_function is None:
-        raise TypeError('There is a reaction rate missing for the following reactants: \n'
-                         + str(reactant_string_list))
+
     else:
-        print(type(reaction_rate_function))
         raise TypeError('The rate type is not supported')
 
     return reaction_rate_string
@@ -163,6 +221,8 @@ def basic_kinetics_string(reactants, reaction_rate, Parameters_For_SBML, type_of
     return kinetics_string
 
 
+# TODO ask about this, make sure it is right
+# TODO really important !!!!!!!
 def stochastic_string(reactant_name, number):
     """
         In the form S * (S - 1)/2 * .....
@@ -198,14 +258,48 @@ def prepare_arguments_for_callable(combination_of_reactant_species, reactant_str
         This function extracts the requested arguments by the rate function for a given reaction
         So then it can be given to it using **kwargs
     """
-    argument_dict = {}
-    for species, reactant_string, argument in zip(combination_of_reactant_species,
-                                                  reactant_string_list,
-                                                  rate_function_arguments):
+    base_dict = {}
+    species_counter = {}
+    species_lists = {}
+    reactants_list = []
+    for i, (species, reactant_string) in enumerate(zip(combination_of_reactant_species, reactant_string_list)):
         species = species['object']
-        argument_dict[argument] = Specific_Species_Operator(species_string=reactant_string, species_object=species)
+        reactant_name = 'reactant' + str(i + 1)
 
-    return argument_dict
+        try:
+            species_counter[species] += 1
+        except KeyError:
+            species_counter[species] = 1
+
+        species_name = species.get_name() + str(species_counter[species])
+
+        sso = Specific_Species_Operator(reactant_string, species)
+        base_dict[reactant_name] = sso
+        base_dict[species_name] = sso
+        base_dict[species_name.lower()] = sso
+
+        reactants_list.append(Specific_Species_Operator(reactant_string, species))
+
+        try:
+            species_lists[species].append(sso)
+        except KeyError:
+            species_lists[species] = [sso]
+
+    base_dict['reactants'] = Concatenate_Specific_Species_Operator(reactants_list)
+
+    for keys in species_lists:
+        base_dict[keys.get_name()] = Concatenate_Specific_Species_Operator(species_lists[keys])
+        base_dict[keys.get_name().lower()] = Concatenate_Specific_Species_Operator(species_lists[keys])
+
+    to_return_dict = {}
+    for argument in rate_function_arguments:
+        try:
+            to_return_dict[argument] = base_dict[argument]
+        # If not create a null species to return false to everything
+        except KeyError:
+            to_return_dict[argument] = Specific_Species_Operator('$Null', Create(1))
+
+    return to_return_dict
 
 
 if __name__ == '__main__':

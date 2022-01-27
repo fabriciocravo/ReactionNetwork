@@ -133,11 +133,6 @@ def create_orthogonal_vector_structure(species):
             within the same unity vector
     '''
     Ref_characteristics_to_object = {}
-    Ref_object_to_characteristics = {}
-
-    for spe in species:
-        for prop in spe.get_references():
-            Ref_object_to_characteristics[prop] = prop.get_characteristics()
 
     for spe in species:
         for prop in spe.get_references():
@@ -148,7 +143,7 @@ def create_orthogonal_vector_structure(species):
                 else:
                     raise TypeError('Characteristics must be unique for modeling properties')
 
-    return Ref_object_to_characteristics, Ref_characteristics_to_object
+    return Ref_characteristics_to_object
 
 
 def create_species_strings(spe_object, sets_of_characteristics):

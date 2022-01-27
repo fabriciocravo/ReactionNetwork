@@ -1,11 +1,8 @@
-import copy
-
+import inspect
 import meta_class_utils
 from order_operators import *
 from function_rate_code import *
 import reaction_construction_nb
-import function_rate_code
-import itertools
 
 
 # Easter Egg: I finished the first version on a sunday at the BnF in Paris
@@ -36,16 +33,20 @@ class Simulator:
         return object_to_return
 
     @classmethod
-    def name_all_involved_species(cls, list_of_species_objects):
+    def name_all_involved_species(cls, list_of_species_objects, names=None):
         """
             Name species automatically acording to their variable names
         """
+        if not names:
+            raise TypeError('Species must be named. Set name to globals() '
+                            '(recommended) or use your own dictionary')
+
         for species in list_of_species_objects:
-            variable_name = [k for k, v in globals().items() if v == species][0]
+            variable_name = [k for k, v in names.items() if v == species][0]
             species.name(variable_name)
 
     @classmethod
-    def compile(cls, species_to_simulate, type_of_model):
+    def compile(cls, species_to_simulate, names=None, type_of_model='deterministic'):
         # TODO no events for now
         # If there is only a single species
         if isinstance(species_to_simulate, Species):
@@ -69,14 +70,13 @@ class Simulator:
         """
 
         # We name the species according to variables names for convenience
-        cls.name_all_involved_species(list_of_species_objects)
+        cls.name_all_involved_species(list_of_species_objects, names)
 
         # Perform checks
         meta_class_utils.add_negative_complement_to_characteristics(list_of_species_objects)
 
         # Construct structures necessary for reactions
-        cls.Ref_object_to_characteristics, cls.Ref_characteristics_to_object = \
-            meta_class_utils.create_orthogonal_vector_structure(list_of_species_objects)
+        cls.Ref_characteristics_to_object = meta_class_utils.create_orthogonal_vector_structure(list_of_species_objects)
 
         # Start by creating the Mappings for the SBML
         Mappings_for_SBML = {}
@@ -129,7 +129,6 @@ class Simulator:
         # Species_String_Dict and a set of reaction objects in Reactions_Set
         Reactions_For_SBML, Parameters_For_SBML = reaction_construction_nb.create_all_reactions(cls.Reactions_set,
                                                                                                 cls.Species_string_dict,
-                                                                                                cls.Ref_object_to_characteristics,
                                                                                                 cls.Ref_characteristics_to_object,
                                                                                                 type_of_model)
 
@@ -495,26 +494,41 @@ def Create(number_of_properties=1):
     The Zero is defined here
     Used this for reactions that result in nothing or come from nothing
 """
-S0 = Create(1)
+S0, S1 = Create(2)
 S0.name('S0')
+S1.name('S1')
 
 if __name__ == '__main__':
 
-    Age, Mood, Live = Create(3)
+    # TODO: Fix this
+    Age, Mood, Live, Phage, Infection = Create(5)
 
-    def rate(human1):
-        if human1.happy:
+    # A, B, C, D = Create(4)
+    # A(100) + B(100) >> C + D[20]
+    # print(Simulator.compile(A | B | C | D, type_of_model='stochastic'))
+    # exit()
+
+    # TODO Check
+    # Mood.sad >> Mood.happy [10]
+    # Age.young >> Age.old [3]
+    # Default_RR[ S0 >> Age [20] ]
+    # Human = Age*Mood
+    # Simulator.compile(Human, type_of_model='stochastic')
+    # exit()
+
+    def rate(x):
+        if x.happy:
             return 10
         else:
             return 5
 
 
-    # Age.young >> Age.old[rate]
-    # Mood.sad >> Mood.happy[3]
-    # Live.live >> Live.dead[40]
-    # Human = Age * Mood
-    # Human(200)  # Human.young.sad.live
-    # Simulator.compile(Human, type_of_model='stochastic')
+    Age.young >> Age.old [rate]
+    Mood.sad >> Mood.happy[3]
+    Human = Age * Mood
+    Human(200)  # Human.young.sad.live
+    Simulator.compile(Human, type_of_model='stochastic')
+    exit()
 
     P = Create(1)
 
@@ -529,8 +543,7 @@ if __name__ == '__main__':
     exit()
 
 
-    """
+
     A, B, C, D = Create(4)
     A(100) + B(100) >> C + D [20]
     print(Simulator.compile(A | B | C | D, type_of_model='stochastic'))
-    """

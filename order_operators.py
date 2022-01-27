@@ -15,8 +15,7 @@ class __Operator_Base:
     # Transform product function
     @staticmethod
     def transform_species_string(species_string, characteristics_to_transform,
-                                 ref_object_to_characteristics,
-                                 ref_characteristics_to_object):
+                                 Ref_characteristics_to_object):
         """
             species_string : A string associated with a species in the form of Species.c1.c2.c3
             characteristics_to_transform : Characteristics received by the species object in the product
@@ -31,7 +30,7 @@ class __Operator_Base:
         """
         species_to_return = deepcopy(species_string)
         for characteristic in characteristics_to_transform:
-            replaceable_characteristics = ref_object_to_characteristics[ref_characteristics_to_object[characteristic]]
+            replaceable_characteristics = Ref_characteristics_to_object[characteristic].get_characteristics()
 
             for rep_cha in replaceable_characteristics:
                 species_to_return = species_to_return.replace('.' + rep_cha, '.' + characteristic)
@@ -51,7 +50,6 @@ class __Operator_Base:
 
     @staticmethod
     def find_all_default_references_to_born_species(species, characteristics, Species_string_dictionary,
-                                                    Ref_object_to_characteristics,
                                                     Ref_characteristics_to_object):
         to_return = []
 
@@ -90,7 +88,6 @@ class __Round_Robin_Base(__Operator_Base):
     """
     def __call__(self, order_dictionary, product_species,
                  Species_string_dictionary,
-                 Ref_object_to_characteristics,
                  Ref_characteristics_to_object):
 
         round_robin_index = {}
@@ -107,7 +104,6 @@ class __Round_Robin_Base(__Operator_Base):
 
                 # Return in list of lists format for combination later
                 products.append([self.transform_species_string(species_to_transform_string, characteristics,
-                                                               Ref_object_to_characteristics,
                                                                Ref_characteristics_to_object)])
 
             # If the species is not on the reactants - order_dictionary
@@ -131,7 +127,6 @@ class __RR_Default_Base(__Operator_Base):
     # Here is the default order requested by Thomas
     def __call__(self, order_dictionary, product_species,
                  Species_string_dictionary,
-                 Ref_object_to_characteristics,
                  Ref_characteristics_to_object):
 
         round_robin_index = {}
@@ -148,7 +143,6 @@ class __RR_Default_Base(__Operator_Base):
 
                 # Return in list of lists format for combination later
                 products.append([self.transform_species_string(species_to_transform_string, characteristics,
-                                                               Ref_object_to_characteristics,
                                                                Ref_characteristics_to_object)])
 
             # If the species is not on the reactants - order_dictionary
@@ -156,7 +150,6 @@ class __RR_Default_Base(__Operator_Base):
                 products.append(self.find_all_default_references_to_born_species(species,
                                                                                  characteristics,
                                                                                  Species_string_dictionary,
-                                                                                 Ref_object_to_characteristics,
                                                                                  Ref_characteristics_to_object))
 
         return products
