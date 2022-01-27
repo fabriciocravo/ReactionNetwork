@@ -8,6 +8,7 @@ class __Operator_Base:
         It also overrides the getitem method so we can use:
         Operator[Reaction] to assign an order to the reaction
     """
+
     # Assign order structure
     def __getitem__(self, item):
         item.order = self
@@ -54,7 +55,8 @@ class __Operator_Base:
         to_return = []
 
         characteristics_to_find = meta_class_utils.complete_characteristics_with_first_values(species, characteristics,
-                                                                                            Ref_characteristics_to_object)
+                                                                                              Ref_characteristics_to_object)
+
         characteristics_to_find.remove(species.get_name())
         characteristics_to_find.union(characteristics)
 
@@ -86,6 +88,7 @@ class __Round_Robin_Base(__Operator_Base):
         For completely new species (no reactant of the same species) we use ALL possible combinations
         For only the default option see the code bellow
     """
+
     def __call__(self, order_dictionary, product_species,
                  Species_string_dictionary,
                  Ref_characteristics_to_object):
@@ -108,9 +111,17 @@ class __Round_Robin_Base(__Operator_Base):
 
             # If the species is not on the reactants - order_dictionary
             except KeyError:
-                products.append(self.find_all_string_references_to_born_species(species,
-                                                                                characteristics,
-                                                                                Species_string_dictionary))
+
+                # Find all the species that reference the one in the reaction
+                species_is_referenced_by = []
+                for key in Species_string_dictionary:
+                    if species in key.get_references():
+                        species_is_referenced_by.append(key)
+
+                for referenciator_species in species_is_referenced_by:
+                    products.append(self.find_all_string_references_to_born_species(referenciator_species,
+                                                                                    characteristics,
+                                                                                    Species_string_dictionary))
 
         return products
 
@@ -124,6 +135,7 @@ class __RR_Default_Base(__Operator_Base):
         Only default options for born species (no reference in reactant)
         See comment above for clarification
     """
+
     # Here is the default order requested by Thomas
     def __call__(self, order_dictionary, product_species,
                  Species_string_dictionary,
@@ -147,10 +159,18 @@ class __RR_Default_Base(__Operator_Base):
 
             # If the species is not on the reactants - order_dictionary
             except KeyError:
-                products.append(self.find_all_default_references_to_born_species(species,
-                                                                                 characteristics,
-                                                                                 Species_string_dictionary,
-                                                                                 Ref_characteristics_to_object))
+
+                # Find all the species that reference the one in the reaction
+                species_is_referenced_by = []
+                for key in Species_string_dictionary:
+                    if species in key.get_references():
+                        species_is_referenced_by.append(key)
+
+                for referenciator_species in species_is_referenced_by:
+                    products.append(self.find_all_default_references_to_born_species(referenciator_species,
+                                                                                     characteristics,
+                                                                                     Species_string_dictionary,
+                                                                                     Ref_characteristics_to_object))
 
         return products
 

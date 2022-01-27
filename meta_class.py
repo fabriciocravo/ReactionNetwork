@@ -35,7 +35,7 @@ class Simulator:
     @classmethod
     def name_all_involved_species(cls, list_of_species_objects, names=None):
         """
-            Name species automatically acording to their variable names
+            Name species automatically according to their variable names
         """
         if not names:
             raise TypeError('Species must be named. Set name to globals() '
@@ -46,7 +46,9 @@ class Simulator:
             species.name(variable_name)
 
     @classmethod
-    def compile(cls, species_to_simulate, names=None, type_of_model='deterministic'):
+    def compile(cls, species_to_simulate, names=None, type_of_model='deterministic', verbose=True):
+        # Define dictionaries to return to avoid compatibility problems
+
         # TODO no events for now
         # If there is only a single species
         if isinstance(species_to_simulate, Species):
@@ -91,6 +93,7 @@ class Simulator:
             cls.Species_string_dict[spe_object] = meta_class_utils.create_species_strings(spe_object,
                                                                                           list_of_definitions)
         # Set of reactions involved
+        cls.Reactions_set = set()
         for spe_object in list_of_species_objects:
             for reference in spe_object.get_references():
                 cls.Reactions_set = cls.Reactions_set.union(reference.get_reactions())
@@ -132,11 +135,28 @@ class Simulator:
                                                                                                 cls.Ref_characteristics_to_object,
                                                                                                 type_of_model)
 
-        for parameters in Parameters_For_SBML:
-            print(parameters, Parameters_For_SBML[parameters])
+        if verbose:
+            print()
+            print('Species')
+            for species in Species_for_SBML:
+                print(species, Species_for_SBML[species])
+            print()
 
-        for reaction in Reactions_For_SBML:
-            print(reaction, Reactions_For_SBML[reaction])
+            print('Mappings')
+            for mapping in Mappings_for_SBML:
+                print(str(mapping) + ' :')
+                for element in Mappings_for_SBML[mapping]:
+                    print(element)
+            print()
+
+            print('Parameters')
+            for parameters in Parameters_For_SBML:
+                print(parameters, Parameters_For_SBML[parameters])
+            print()
+
+            print('Reactions')
+            for reaction in Reactions_For_SBML:
+                print(reaction, Reactions_For_SBML[reaction])
 
         return Species_for_SBML, Reactions_For_SBML, Parameters_For_SBML, Mappings_for_SBML
 

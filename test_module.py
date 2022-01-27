@@ -2,7 +2,8 @@ from meta_class import *
 
 if __name__ == '__main__':
 
-    Age, Mood, Live, Phage, Infection = Create(5)
+    print('Model one')
+    Age, Mood = Create(2)
 
     # Rate test
     def rate(x):
@@ -11,10 +12,27 @@ if __name__ == '__main__':
         else:
             return 5
 
-
+    Mood.sad >> Mood.happy [10]
     Age.young >> Age.old [rate]
-    Mood.sad >> Mood.happy [5]
+    Default_RR[ S0 >> Age [20] ]
+    Human = Age*Mood
+    Simulator.compile(Human, globals(), type_of_model='stochastic')
+
+    print('\n \n \n \n')
+
+    print('Model two')
+    Age, Mood = Create(2)
+
+    Mood.sad >> Mood.happy[10]
+    Age.young >> Age.old[rate]
+    S0 >> Age[20]
     Human = Age * Mood
-    Human + Phage >> S0 [10]
-    Human(200)  # Human.young.sad.live
-    Simulator.compile(Human | Phage, globals(), type_of_model='stochastic')
+
+    Simulator.compile(Human, globals(), type_of_model='stochastic')
+
+    print('\n \n \n \n')
+
+
+
+
+
