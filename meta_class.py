@@ -16,7 +16,7 @@ class Simulator:
     """
     
     # Basic storage of defined variables for Simulator
-    Entity_counter = 0
+    Entity_counter = -2
     Reactions_set = set()
     Species_string_dict = {}
     Ref_object_to_characteristics = {}
@@ -514,9 +514,14 @@ def Create(number_of_properties=1):
     The Zero is defined here
     Used this for reactions that result in nothing or come from nothing
 """
-S0, S1 = Create(2)
-S0.name('S0')
-S1.name('S1')
+__S0, __S1 = Create(2)
+__S0.name('S0')
+__S1.name('S1')
+
+Zero = __S0
+def Copy(species):
+    return species*__S1
+
 
 if __name__ == '__main__':
 

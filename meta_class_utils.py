@@ -133,13 +133,14 @@ def create_orthogonal_vector_structure(species):
             within the same unity vector
     '''
     Ref_characteristics_to_object = {}
-
     for spe in species:
         for prop in spe.get_references():
             for cha in prop.get_characteristics():
 
                 if cha not in Ref_characteristics_to_object:
                     Ref_characteristics_to_object[cha] = prop
+                elif Ref_characteristics_to_object[cha] == prop:
+                    pass
                 else:
                     raise TypeError('Characteristics must be unique for modeling properties')
 
