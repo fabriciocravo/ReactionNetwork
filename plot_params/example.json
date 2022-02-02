@@ -15,7 +15,7 @@
 
 	"figure_1":{
 		"plot_1":{
-			"species":["A"]
+			"species_to_plot":["A"]
 		}
 	}
 }

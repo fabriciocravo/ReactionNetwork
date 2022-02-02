@@ -1,14 +1,9 @@
 {
-
 	"save_fig": true,
 	"output_dir": null,
 	"statistics": "runs",
 	"filename_type": ["pdf"],
 	"no_legend": false,
 	"no_title": true,
-	"no_grid": true,
-
-	"plot_1":{
-		"species": ["A"]
-	}
+	"no_grid": true
 }

@@ -1,3 +1,5 @@
+import numpy as np
+
 
 def time_series_average(list_series):
 
@@ -42,6 +44,20 @@ def standard_deviation(list_series):
         except KeyError:
             raise ValueError('The time_series_average function was programed for same size time series')
 
-        deviation_series.append(add/len(list_series))
+        deviation_series.append(np.sqrt(add/len(list_series)))
 
     return deviation_series
+
+
+def average_plus_standard_deviation(list_series):
+
+    series_average = time_series_average(list_series)
+    series_deviation = standard_deviation(list_series)
+
+    plus = []
+    minus = []
+    for average, deviation in zip(series_average, series_deviation):
+        plus.append(average + deviation)
+        minus.append(average - deviation)
+
+    return series_average, plus, minus

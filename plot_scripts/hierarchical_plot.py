@@ -1,7 +1,7 @@
 import json
 import os.path
 import math
-import plot_scripts.statistics as spd
+import plot_scripts.statistics_calculations as spd
 
 import numpy as np
 import pickle as pkl
@@ -21,7 +21,7 @@ def color_cycle():
     :return: a simple color cycle fuction for different colors for different species
     """
 
-    color_list = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+    color_list = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
     global __plot_color
     __plot_color = __plot_color + 1
@@ -233,7 +233,7 @@ def handle_plot_json(params, plot_json):
 ####################### PLOTING FUNCTIONS
 
 
-def plot_curves(data, axs, figure_index, plot_params, mappings = {}):
+def plot_curves(data, axs, figure_index, plot_params, species):
     """
 
         This function plots the curves in the assigned axis
@@ -243,7 +243,7 @@ def plot_curves(data, axs, figure_index, plot_params, mappings = {}):
     :param data: data given to be plot from pickle file
     :param figure_index: index of the current figure analysed
     :param plot_params: parameters for plotting
-    :param mappings: species mappings set by the user
+    :param species: species mappings set by the user
     """
 
     # Get the plot number from the list of plots
@@ -260,19 +260,14 @@ def plot_curves(data, axs, figure_index, plot_params, mappings = {}):
         # Get the species from plot parameters
         if find_parameter(plot_params, key='species_to_plot', index=(figure_index, plot_index)) is not None:
             species = find_parameter(plot_params, key='species_to_plot', index=(figure_index, plot_index))
-        else:
-            if mappings != {}:
-                species = list(mappings.keys())
-            else:
-                species = list(data.keys())
-                species.remove('Time')
 
-        if find_parameter(plot_params, key='runs',  index=(figure_index, plot_index)) is not None:
-            runs = find_parameter(plot_params, key='runs',  index=(figure_index, plot_index))
-        else:
-            runs = range(len(data[species[0]]['runs']))
 
         for spe in species:
+
+            if find_parameter(plot_params, key='runs', index=(figure_index, plot_index)) is not None:
+                runs = find_parameter(plot_params, key='runs', index=(figure_index, plot_index))
+            else:
+                runs = range(len(data[spe]['runs']))
 
             # Get the parameters assigned to the species, if not assign empty for None returns
             if find_parameter(plot_params, key=spe, index=(figure_index, plot_index)) is not None:
@@ -290,6 +285,11 @@ def plot_curves(data, axs, figure_index, plot_params, mappings = {}):
                 linestyle = find_parameter(species_characteristics, key='linestyle')
             else:
                 linestyle = '-'
+
+            print()
+            print(spe)
+            print(runs)
+            print()
 
             for run in runs:
                 axs.plot(data['Time'], data[spe]['runs'][run], color=curve_color,
@@ -347,7 +347,7 @@ def set_global_parameters(fig, plot_params):
         fig.set_dpi(plot_params['dpi'])
 
 
-def plot_data(data, mappings, plot_params):
+def plot_data(data, species, plot_params):
     """
         This function plots the simulation results according to the specifications
 
@@ -355,6 +355,8 @@ def plot_data(data, mappings, plot_params):
     :param module_logger: logger from simulation to store plotting info
     :param plot_json: plot_json file with plotting instructions
     """
+    if not species:
+        raise TypeError('Plotting function did not receive any species')
 
     # Get the figure number from the list of figures
     # Add it to parameters
@@ -362,6 +364,8 @@ def plot_data(data, mappings, plot_params):
         figure_number = len(find_parameter(plot_params, 'figures'))
     except TypeError:
         # No figures plot only the default
+        figure_number = 1
+    if figure_number == 0:
         figure_number = 1
 
     # Create figures grid, max_lines is 2 as default and the value is defined in the function
@@ -375,7 +379,7 @@ def plot_data(data, mappings, plot_params):
 
     # Now we plot
     for figure_index in range(figure_number):
-        plot_curves(data, figure_hash(figure_index, axis_list), figure_index, plot_params, mappings)
+        plot_curves(data, figure_hash(figure_index, axis_list), figure_index, plot_params, species)
 
     # Real default case
     plt.show()

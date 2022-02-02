@@ -2,8 +2,10 @@ import Modules.meta_class
 import SBML_simulator.run
 from Modules.meta_class import *
 from parameter_scripts import parameter_reader as pr
+from parameters.default_reader import get_default_parameters
+from plot_params.default_plot_reader import get_default_plot_parameters
 from SBML_simulator import builder, util
-from plot_scripts.hierarchical_plot import get_plot_params, plot_data
+import plot_scripts.default_plots as dp
 
 import os
 
@@ -26,10 +28,10 @@ class MobsPy:
             raise TypeError('Model must be formed by Species objects')
 
         if not parameters:
-            self.Parameters = pr.read_json(current_directory + '/parameters/default_parameters.json')
+            self.Parameters = get_default_parameters()
 
         if not plot_parameters:
-            self.Plot_Parameters = get_plot_params(current_directory + '/plot_params/default_plot.json')
+            self.Plot_Parameters = get_default_plot_parameters()
 
         self._Species_for_SBML, self._Reactions_For_SBML, \
         self._Parameters_For_SBML, self._Mappings_for_SBML = Compiler.compile(model, names=names,
@@ -77,14 +79,29 @@ class MobsPy:
             print("WARNING: NOT saving data (reason: parameter <save_data>)")
 
         if self.Parameters['plot']:
-            plot_data(self.Data['data'], self.Data['mappings'], self.Plot_Parameters)
+            if self.Parameters['simulation_method'] == 'stochastic':
+                self.plot_stochastic()
+            elif self.Parameters['simulation_method'] == 'deterministic':
+                self.plot_deterministic()
 
+    def extract_plot_essentials(self, species = None, data = None, plot_params = None):
+        if species is None:
+            species = list(self._Mappings_for_SBML.keys())
+        if data is None:
+            data = self.Data['data']
+        if plot_params is None:
+            plot_params = self.Plot_Parameters
+        return species, data, plot_params
+
+    # Plotting encapsulation
+    def plot_stochastic(self, species = None, data = None, plot_params = None):
+        plot_essentials = self.extract_plot_essentials(species, data, plot_params)
+        dp.stochastic_plot(plot_essentials[0], plot_essentials[1], plot_essentials[2])
+
+    def plot_deterministic(self):
+        pass
 
 if __name__ == '__main__':
-
-    Mortal = Create(1)
-    Model = MobsPy(Mortal)
-    exit()
 
     A, B, C, D = Create(4)
     A(100) + B(200) >> C + D [0.1]
