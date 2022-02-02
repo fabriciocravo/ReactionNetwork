@@ -38,8 +38,8 @@ class Compiler:
             Name species automatically according to their variable names
         """
         if not names:
-            raise TypeError('Species must be named. Set name to globals() '
-                            '(recommended) or use your own dictionary')
+            raise TypeError('Species must be named' +
+                            'Please set ( names == globals() ) in the MobsPy constructor for automatic naming')
 
         for species in list_of_species_objects:
             try:
