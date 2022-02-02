@@ -1,5 +1,5 @@
 from copy import deepcopy
-import meta_class_utils
+import Modules.meta_class_utils
 
 
 class __Operator_Base:

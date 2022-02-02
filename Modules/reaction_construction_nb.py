@@ -1,7 +1,7 @@
 from copy import deepcopy
-import function_rate_code as fr
+import Modules.function_rate_code as fr
 import itertools
-import meta_class as mc
+import Modules.meta_class as mc
 
 
 def iterator_for_combinations(list_of_lists):

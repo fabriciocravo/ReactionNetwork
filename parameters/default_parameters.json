@@ -1,0 +1,30 @@
+{
+  "__comment_1": "General data bellow",
+
+  "solver" : "copasi",
+  "volume_ml" : 1,
+  "species_min" : -1,
+  "max_solver_failures": 1,
+
+  "__comment_2": "COPASI Info",
+
+  "simulation_method": "deterministic",
+  "duration": null,
+  "repetitions" : 3,
+  "confidence" : 0.8,
+  "relative_tolerance": 1e-8,
+  "absolute_tolerance": 1e-10,
+  "max_internal_steps": 2e8,
+  "max_internal_step_size": 0,
+
+  "__comment_3": "OUTPUT",
+
+  "output_dir" : "outputs/",
+  "output_file" : null,
+  "save_data": true,
+  "sim_stepsize": 0.01,
+  "print_stepsize": 0.01,
+  "plot" : true,
+  "plot_json" : null
+
+}
