@@ -42,8 +42,12 @@ class Compiler:
                             '(recommended) or use your own dictionary')
 
         for species in list_of_species_objects:
-            variable_name = [k for k, v in names.items() if v == species][0]
-            species.name(variable_name)
+            try:
+                variable_name = [k for k, v in names.items() if v == species][0]
+                species.name(variable_name)
+            except KeyError:
+                raise ValueError('There is a non-named species. '
+                                 'Please set ( names == globals() ) in the MobsPy constructor for automatic naming')
 
     @classmethod
     def compile(cls, species_to_simulate, volume_ml, names=None, type_of_model='deterministic', verbose=True):

@@ -82,6 +82,10 @@ class MobsPy:
 
 if __name__ == '__main__':
 
+    Mortal = Create(1)
+    Model = MobsPy(Mortal)
+    exit()
+
     A, B, C, D = Create(4)
     A(100) + B(200) >> C + D [0.1]
     My_Model = MobsPy(A | B | C | D, globals())
