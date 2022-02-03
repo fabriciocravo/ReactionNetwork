@@ -1,13 +1,14 @@
 {
-  "__comment_1": "Model parameters",
+  "__comment_1": "Model parameters - Repetitions only for stochastic",
 
   "volume_ml" : 1,
+  "repetitions" : 1,
 
-  "__comment_2": "COPASI Info",
+  "__comment_2": "basiCO parameters",
 
   "simulation_method": "deterministic",
+  "start_time": 0,
   "duration": null,
-  "repetitions" : 3,
   "confidence" : 0.8,
   "relative_tolerance": 1e-8,
   "absolute_tolerance": 1e-10,

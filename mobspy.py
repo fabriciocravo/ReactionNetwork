@@ -6,6 +6,7 @@ from parameters.default_reader import get_default_parameters
 from plot_params.default_plot_reader import get_default_plot_parameters
 from SBML_simulator import builder, util
 import plot_scripts.default_plots as dp
+import matplotlib.pyplot as plt
 
 import os
 
@@ -21,8 +22,8 @@ class MobsPy:
         :param plot_parameters: Plot parameters for plotting
         """
 
-        current_directory = os.getcwd()
         self.Model = model
+        self.Names = names
 
         if not isinstance(model, Species) and not isinstance(model, ParallelSpecies):
             raise TypeError('Model must be formed by Species objects')
@@ -34,16 +35,19 @@ class MobsPy:
             self.Plot_Parameters = get_default_plot_parameters()
 
         print('Compiling model')
-        self._Species_for_SBML, self._Reactions_For_SBML, \
-        self._Parameters_For_SBML, self._Mappings_for_SBML = Compiler.compile(model, names=names,
-                                                                              volume_ml=self.Parameters['volume_ml'],
-                                                                              type_of_model=self.Parameters["simulation_method"],
-                                                                              verbose=False)
-        print('Model compiled successfully')
+        self.compile(verbose=False)
 
         # Other needed things for simulating
         self.SBML_string = None
         self.Data = None
+
+    def compile(self, verbose=True):
+        self._Species_for_SBML, self._Reactions_For_SBML, \
+        self._Parameters_For_SBML, self._Mappings_for_SBML = Compiler.compile(self.Model, names=self.Names,
+                                                                              volume_ml=self.Parameters['volume_ml'],
+                                                                              type_of_model=self.Parameters[
+                                                                                  "simulation_method"],
+                                                                              verbose=verbose)
 
     def run(self):
         """
@@ -88,7 +92,7 @@ class MobsPy:
             elif self.Plot_Parameters['simulation_method'] == 'deterministic':
                 self.plot_deterministic()
 
-    def extract_plot_essentials(self, species = None, data = None, plot_params = None):
+    def extract_plot_essentials(self, species=None, data=None, plot_params=None):
         if species is None:
             species = list(self._Mappings_for_SBML.keys())
         if data is None:
@@ -98,11 +102,11 @@ class MobsPy:
         return species, data, plot_params
 
     # Plotting encapsulation
-    def plot_stochastic(self, species = None, data = None, plot_params = None):
+    def plot_stochastic(self, species=None, data=None, plot_params=None):
         plot_essentials = self.extract_plot_essentials(species, data, plot_params)
         dp.stochastic_plot(plot_essentials[0], plot_essentials[1], plot_essentials[2])
 
-    def plot_deterministic(self, species = None, data = None, plot_params = None):
+    def plot_deterministic(self, species=None, data=None, plot_params=None):
         plot_essentials = self.extract_plot_essentials(species, data, plot_params)
         dp.deterministic_plot(plot_essentials[0], plot_essentials[1], plot_essentials[2])
 
@@ -111,9 +115,4 @@ class MobsPy:
 
 
 if __name__ == '__main__':
-
-    A, B, C, D = Create(4)
-    A(100) + B(200) >> C + D [0.1]
-    My_Model = MobsPy(A | B | C | D, globals())
-    My_Model.Parameters['simulation_method'] = 'stochastic'
-    My_Model.run()
+    pass

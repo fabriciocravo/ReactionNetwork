@@ -178,7 +178,7 @@ def extract_species_strings(species, characteristics, Species_string_dict):
     species_strings_to_filter = species_strings_to_filter.union(Species_string_dict[species])
 
     for species_string in species_strings_to_filter:
-        species_string_split = species_string.split('.')
+        species_string_split = species_string.split('_dot_')
 
         if all(char in species_string_split for char in characteristics):
             species_strings_list.append(species_string)
@@ -249,6 +249,7 @@ def create_all_reactions(Reactions, Species_string_dict,
                 construct_reactant_structures(combination_of_reactant_species, Species_string_dict)
 
             for reactant_string_list in iterator_for_combinations(reactant_species_string_combination_list):
+
                 product_object_list = construct_product_structure(reaction)
                 order_structure = construct_order_structure(base_species_order, reactant_string_list)
 

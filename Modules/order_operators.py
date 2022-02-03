@@ -1,5 +1,5 @@
 from copy import deepcopy
-import Modules.meta_class_utils
+import Modules.meta_class_utils as mc
 
 
 class __Operator_Base:
@@ -34,7 +34,7 @@ class __Operator_Base:
             replaceable_characteristics = Ref_characteristics_to_object[characteristic].get_characteristics()
 
             for rep_cha in replaceable_characteristics:
-                species_to_return = species_to_return.replace('.' + rep_cha, '.' + characteristic)
+                species_to_return = species_to_return.replace('_dot_' + rep_cha, '_dot_' + characteristic)
 
         return species_to_return
 
@@ -44,7 +44,7 @@ class __Operator_Base:
         for key in Species_string_dictionary:
             if species in key.get_references():
                 for species_string in Species_string_dictionary[key]:
-                    species_string_split = species_string.split('.')
+                    species_string_split = species_string.split('_dot_')
                     if all(char in species_string_split for char in characteristics):
                         to_return.append(species_string)
         return to_return
@@ -54,8 +54,8 @@ class __Operator_Base:
                                                     Ref_characteristics_to_object):
         to_return = []
 
-        characteristics_to_find = meta_class_utils.complete_characteristics_with_first_values(species, characteristics,
-                                                                                              Ref_characteristics_to_object)
+        characteristics_to_find = mc.complete_characteristics_with_first_values(species, characteristics,
+                                                                                Ref_characteristics_to_object)
 
         characteristics_to_find.remove(species.get_name())
         characteristics_to_find.union(characteristics)
@@ -63,7 +63,7 @@ class __Operator_Base:
         for key in Species_string_dictionary:
             if species in key.get_references():
                 for species_string in Species_string_dictionary[key]:
-                    species_string_split = species_string.split('.')
+                    species_string_split = species_string.split('_dot_')
                     if all(char in species_string_split for char in characteristics_to_find):
                         to_return.append(species_string)
 

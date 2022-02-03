@@ -68,7 +68,7 @@ def extract_characteristics_from_string(species_string):
         Species are named for the SBML as species_name.characteristic1.characteristic2
         So this transforms them into a set
     """
-    return set(species_string.split('.'))
+    return set(species_string.split('_dot_'))
 
 
 def turn_set_into_0_value_dict(set):
@@ -163,7 +163,7 @@ def create_species_strings(spe_object, sets_of_characteristics):
 
     for i in itertools.product(*lists_of_definitions):
         if lists_of_definitions:
-            set_of_species.add(spe_object.get_name() + '.' + '.'.join(i))
+            set_of_species.add(spe_object.get_name() + '_dot_' + '_dot_'.join(i))
         else:
             set_of_species.add(spe_object.get_name())
 

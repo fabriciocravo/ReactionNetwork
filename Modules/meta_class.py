@@ -85,6 +85,7 @@ class Compiler:
         cls.Ref_characteristics_to_object = mc.create_orthogonal_vector_structure(list_of_species_objects)
 
         # Start by creating the Mappings for the SBML
+        # Convert to user friendly format as well
         Mappings_for_SBML = {}
         for spe_object in list_of_species_objects:
             Mappings_for_SBML[spe_object.get_name()] = []
@@ -111,7 +112,7 @@ class Compiler:
         # Create the mappings for sbml
         for spe_object in list_of_species_objects:
             for species_string in cls.Species_string_dict[spe_object]:
-                Mappings_for_SBML[spe_object.get_name()].append(species_string)
+                Mappings_for_SBML[spe_object.get_name()].append(species_string.replace('_dot_', '.'))
 
         # Set initial counts for SBML
         for spe_object in list_of_species_objects:
@@ -144,6 +145,7 @@ class Compiler:
                                                                           type_of_model)
 
         # Attach units to rates
+        # Set rates to per_minute and not per_second
         for p in Parameters_For_SBML:
             Parameters_For_SBML[p] = (Parameters_For_SBML[p], 'per_min')
 
@@ -151,7 +153,7 @@ class Compiler:
             print()
             print('Species')
             for species in Species_for_SBML:
-                print(species, Species_for_SBML[species])
+                print(species.replace('_dot_', '.'), Species_for_SBML[species])
             print()
 
             print('Mappings')
@@ -168,7 +170,7 @@ class Compiler:
 
             print('Reactions')
             for reaction in Reactions_For_SBML:
-                print(reaction, Reactions_For_SBML[reaction])
+                print(reaction, str(Reactions_For_SBML[reaction]).replace('_dot_', '.'))
 
         return Species_for_SBML, Reactions_For_SBML, Parameters_For_SBML, Mappings_for_SBML
 
@@ -192,7 +194,7 @@ class Reactions:
             else:
                 reaction_string += str(r['object'])
 
-            reaction_string += "." + ".".join(r['characteristics'])
+            reaction_string += '.' + '.'.join(r['characteristics'])
 
             if i != len(list_of_reactants) - 1:
                 reaction_string += ' '
@@ -324,7 +326,7 @@ class Species:
         return self._name
 
     def show_reactions(self):
-        print(str(self) + ':')
+        print(str(self) + '_dot_')
         for reference in self._references:
             for reaction in reference.get_reactions():
                 print(reaction)
@@ -337,7 +339,7 @@ class Species:
                 reference.print_characteristics()
 
     def show_references(self):
-        print(str(self) + ':')
+        print(str(self) + '_dot_')
         print('{', end='')
         for i, reference in enumerate(self.get_references()):
             if reference.get_characteristics():

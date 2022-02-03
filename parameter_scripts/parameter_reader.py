@@ -3,6 +3,7 @@ import sys
 from datetime import datetime
 import os
 from pathlib import Path
+import numpy as np
 
 
 def read_json(json_file_name):
@@ -17,9 +18,6 @@ def read_json(json_file_name):
         try:
             json_data = json.load(file)
         except json.decoder.JSONDecodeError as e:
-            # logging_array[0].error(f'Error while decoding json file "{plot_json_filename}".')
-            # logging_array[0].error(f'{e}')
-            # logging_array[0].error(f'File content:\n{file.read()}', level='error')
             raise TypeError('Error reading file')
             exit(1)
 
@@ -29,12 +27,12 @@ def read_json(json_file_name):
 def __set_standard_duration(params, params_for_sbml):
 
     if params['duration'] is None:
-        max_rate = 0
+        min_rate = np.inf
         for p in params_for_sbml:
             rate = params_for_sbml[p][0]
-            if rate > max_rate:
-                max_rate = rate
-        params['duration'] = 5 * max_rate
+            if rate < min_rate:
+                min_rate = rate
+        params['duration'] = (10 * min_rate)*60
 
 
 def __name_output_file(params, mappings):

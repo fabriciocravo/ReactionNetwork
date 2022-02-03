@@ -43,7 +43,10 @@ def job_execution(sbml_str, params, jobs):
         sbml_str, i = packed
         basico.model_io.load_model_from_string(sbml_str)
 
-        data = basico.run_time_course(params['duration'], method=params["simulation_method"].lower())
+        data = basico.run_time_course(params['duration'],
+                                      method=params["simulation_method"].lower(),
+                                      start_time=params["start_time"])
+
         reformated_data = reformat_time_series(data)
 
         return reformated_data
@@ -64,7 +67,7 @@ def reformat_time_series(data):
     data_dict = {'Time': data.index.tolist()}
 
     for key in data:
-        data_dict[key] = list(data[key])
+        data_dict[key.replace('_dot_', '.')] = list(data[key])
 
     return data_dict
 
@@ -100,6 +103,7 @@ def remap_species(data, mapping):
     By default, a mapping is a list of species in which case the
     sum is taken: ['a', 'b', ...]
     """
+
     mapped_data = {'Time': data['Time']}
     T = range(len(data['Time']))
 
