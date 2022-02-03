@@ -1,10 +1,7 @@
 {
-  "__comment_1": "General data bellow",
+  "__comment_1": "Model parameters",
 
-  "solver" : "copasi",
   "volume_ml" : 1,
-  "species_min" : -1,
-  "max_solver_failures": 1,
 
   "__comment_2": "COPASI Info",
 

@@ -33,8 +33,8 @@ class MobsPy:
         if not plot_parameters:
             self.Plot_Parameters = get_default_plot_parameters()
 
-        self._Species_for_SBML, self._Reactions_For_SBML, \
         print('Compiling model')
+        self._Species_for_SBML, self._Reactions_For_SBML, \
         self._Parameters_For_SBML, self._Mappings_for_SBML = Compiler.compile(model, names=names,
                                                                               volume_ml=self.Parameters['volume_ml'],
                                                                               type_of_model=self.Parameters["simulation_method"],
