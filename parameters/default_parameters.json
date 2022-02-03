@@ -21,7 +21,7 @@
 
   "output_dir" : "outputs/",
   "output_file" : null,
-  "save_data": true,
+  "save_data": false,
   "sim_stepsize": 0.01,
   "print_stepsize": 0.01,
   "plot" : true,

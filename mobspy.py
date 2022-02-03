@@ -34,10 +34,12 @@ class MobsPy:
             self.Plot_Parameters = get_default_plot_parameters()
 
         self._Species_for_SBML, self._Reactions_For_SBML, \
+        print('Compiling model')
         self._Parameters_For_SBML, self._Mappings_for_SBML = Compiler.compile(model, names=names,
                                                                               volume_ml=self.Parameters['volume_ml'],
                                                                               type_of_model=self.Parameters["simulation_method"],
                                                                               verbose=False)
+        print('Model compiled successfully')
 
         # Other needed things for simulating
         self.SBML_string = None
@@ -51,10 +53,12 @@ class MobsPy:
         # We process the parameters here in case there were updates
         pr.parameter_process(self.Parameters, self._Mappings_for_SBML, self._Parameters_For_SBML)
         if self.Parameters['simulation_method'].lower() == 'deterministic':
-            self.Plot_Parameters['mode'] = 'deterministic'
+            self.Parameters['repetitions'] = 1
+            self.Plot_Parameters['simulation_method'] = 'deterministic'
         elif self.Parameters['simulation_method'].lower() == 'stochastic':
-            self.Plot_Parameters['mode'] = 'stochastic'
+            self.Plot_Parameters['simulation_method'] = 'stochastic'
 
+        print('Starting Simulator')
         self.SBML_string = builder.build(self._Species_for_SBML,
                                          self._Parameters_For_SBML,
                                          self._Reactions_For_SBML)
@@ -79,9 +83,9 @@ class MobsPy:
             print("WARNING: NOT saving data (reason: parameter <save_data>)")
 
         if self.Parameters['plot']:
-            if self.Parameters['simulation_method'] == 'stochastic':
+            if self.Plot_Parameters['simulation_method'] == 'stochastic':
                 self.plot_stochastic()
-            elif self.Parameters['simulation_method'] == 'deterministic':
+            elif self.Plot_Parameters['simulation_method'] == 'deterministic':
                 self.plot_deterministic()
 
     def extract_plot_essentials(self, species = None, data = None, plot_params = None):
@@ -98,8 +102,13 @@ class MobsPy:
         plot_essentials = self.extract_plot_essentials(species, data, plot_params)
         dp.stochastic_plot(plot_essentials[0], plot_essentials[1], plot_essentials[2])
 
-    def plot_deterministic(self):
-        pass
+    def plot_deterministic(self, species = None, data = None, plot_params = None):
+        plot_essentials = self.extract_plot_essentials(species, data, plot_params)
+        dp.deterministic_plot(plot_essentials[0], plot_essentials[1], plot_essentials[2])
+
+    def plot_raw(self, parameters_or_file):
+        dp.raw_plot(self.Data['data'], parameters_or_file)
+
 
 if __name__ == '__main__':
 

@@ -16,7 +16,6 @@ __plot_color = 0
 ####################### PRACTICAL FUNCTIONS
 
 def color_cycle():
-
     """
     :return: a simple color cycle fuction for different colors for different species
     """
@@ -31,7 +30,6 @@ def color_cycle():
 
 # This function only works for the standart time we are currently using
 def convert_to_time_unit(time_data, unit):
-
     """
     :param time_data: the time data for the used axis in minutes
     :param unit: the unit desired to be converted
@@ -58,8 +56,17 @@ def convert_to_time_unit(time_data, unit):
     return time_data, time_unit
 
 
+def get_total_figure_number(axis_matrix):
+    # Get the number of figures, using the axis_matrix
+    try:
+        total_figure_number = axis_matrix.shape[0] * axis_matrix.shape[1]
+    except IndexError:
+        total_figure_number = axis_matrix.shape[0]
+    return total_figure_number
+
+
 # Hash for converting linear figure number into index
-def figure_hash(current_figure, axis_list):
+def figure_hash(current_figure, axis_matrix):
     """
         This function allows one to acess the figure grid with a linear input
         For instance one can access a 2x2 grid using 0, 1, 2, 3
@@ -69,31 +76,27 @@ def figure_hash(current_figure, axis_list):
         3 becomes 1,1
 
     :param current_figure: linear number of the figure
-    :param axis_list: a list with all the created axis on the multiple figure subplot
+    :param axis_matrix: a list with all the created axis on the multiple figure subplot
     :return: the correct axis based on the number provided
     """
 
     # Get the number of lines
-    max_lines = len(axis_list)
-
-    # Get the number of figures
-    try:
-        total_figure_number = axis_list.shape[0] * axis_list.shape[1]
-    except IndexError:
-        total_figure_number = axis_list.shape[0]
+    max_lines = len(axis_matrix)
+    total_figure_number = get_total_figure_number(axis_matrix)
 
     # Correction for index purposes
-    current_figure = current_figure - 1
+    current_figure = current_figure
 
     col = math.floor(current_figure / max_lines)
+
     if total_figure_number <= max_lines:
-        return axis_list[int(current_figure % max_lines)]
+        return axis_matrix[int(current_figure % max_lines)]
     else:
-        return axis_list[int(current_figure % max_lines), int(col)]
+        return axis_matrix[int(current_figure % max_lines), int(col)]
 
 
 # Hash to convert total figure number into grid
-def figure_hash_creation(total_figure_number, max_lines = None):
+def figure_hash_creation(total_figure_number, max_lines=None):
     """
 
         This is hash used to create the figure grid automatically according to the number of figures
@@ -113,7 +116,7 @@ def figure_hash_creation(total_figure_number, max_lines = None):
     if total_figure_number <= max_lines:
         fig, axs = plt.subplots(total_figure_number)
     else:
-        column_number = int((total_figure_number + total_figure_number % max_lines)/max_lines)
+        column_number = int((total_figure_number + total_figure_number % max_lines) / max_lines)
         fig, axs = plt.subplots(max_lines, column_number)
 
     if total_figure_number == 1:
@@ -122,7 +125,7 @@ def figure_hash_creation(total_figure_number, max_lines = None):
     return fig, axs
 
 
-def find_parameter(params, key, index = None):
+def find_parameter(params, key, index=None):
     """
 
         This is the hearth of the plotting structure, this functions allows one to simply set multiple characteristics
@@ -145,7 +148,7 @@ def find_parameter(params, key, index = None):
     if index is None:
         try:
             return params[key]
-        except KeyError:
+        except (KeyError, IndexError):
             return None
     # Search a parameter
     # If local return local, otherwise return global
@@ -154,11 +157,11 @@ def find_parameter(params, key, index = None):
 
         try:
             return params['figures'][index][key]
-        except KeyError:
+        except (KeyError, IndexError):
 
             try:
                 return params[key]
-            except KeyError:
+            except (KeyError, IndexError):
                 return None
     # If two indexes are given
     # Look inside the plot
@@ -169,71 +172,22 @@ def find_parameter(params, key, index = None):
         try:
             return params['figures'][index[0]]['plots'][index[1]][key]
 
-        except KeyError:
+        except (KeyError, IndexError):
 
             try:
                 return params['figures'][index[0]][key]
 
-            except KeyError:
+            except (KeyError, IndexError):
 
-               try:
-                   return params[key]
-               except KeyError:
-                   return None
-
-
-################## DEALING WITH JSONS
-
-
-def get_plot_params(plot_json_filename):
-    """
-    In:
-      plot_json_filename: json file name
-
-    Returns:
-      plot parameter dictionary
-    """
-    with open(plot_json_filename, 'r') as file:
-        try:
-            json_data = json.load(file)
-        except json.decoder.JSONDecodeError as e:
-            raise TypeError(f'Error while decoding json file "{plot_json_filename}".'
-                    + f'{e}')
-
-    return json_data
-
-
-def handle_plot_json(params, plot_json):
-    """
-    :param params: simulation parameters
-    :param plot_json: plot_json file name
-    :return: dictionary with plot parameters
-    """
-
-    # If a plot json is not specified search the params
-    if plot_json is None:
-        try:
-            plot_json = params['plot_json']
-        except KeyError:
-            plot_json = None
-
-    # Check to see if extension is given
-    # If not we add to it
-    if plot_json is not None and ".json" not in plot_json:
-        plot_json += ".json"
-
-    # Check json file in directory:
-    if not os.path.exists(plot_json):
-        raise TypeError("No JSON file detected plotting with default parameters")
-
-    plot_params = get_plot_params(plot_json)
-    return plot_params
+                try:
+                    return params[key]
+                except (KeyError, IndexError):
+                    return None
 
 
 ####################### PLOTING FUNCTIONS
 
-
-def plot_curves(data, axs, figure_index, plot_params, species):
+def plot_curves(data, axs, figure_index, plot_params):
     """
 
         This function plots the curves in the assigned axis
@@ -252,15 +206,19 @@ def plot_curves(data, axs, figure_index, plot_params, species):
     except TypeError:
         # No figures plot only the default
         plot_number = 1
+    if plot_number == 0:
+        plot_number = 1
 
     # For all plots in the figure
     # Set all parameters and plot
+    legend_flag = False
     for plot_index in range(plot_number):
 
         # Get the species from plot parameters
         if find_parameter(plot_params, key='species_to_plot', index=(figure_index, plot_index)) is not None:
             species = find_parameter(plot_params, key='species_to_plot', index=(figure_index, plot_index))
-
+        else:
+            raise ValueError('No species found for plotting in the Plotting Parameters')
 
         for spe in species:
 
@@ -286,57 +244,65 @@ def plot_curves(data, axs, figure_index, plot_params, species):
             else:
                 linestyle = '-'
 
-            print()
-            print(spe)
-            print(runs)
-            print()
+            if find_parameter(species_characteristics, key='linewidth') is not None:
+                linewidth = find_parameter(species_characteristics, key='linewidth')
+            else:
+                linewidth = None
+
+            if find_parameter(species_characteristics, key='label') is not None:
+                label = find_parameter(species_characteristics, key='label')
+                legend_flag = True
+            else:
+                label = None
 
             for run in runs:
                 axs.plot(data['Time'], data[spe]['runs'][run], color=curve_color,
-                         linestyle = linestyle, linewidth=None)
+                         linestyle=linestyle, linewidth=linewidth, label=label)
+
+    if legend_flag:
+        axs.legend()
 
 
-def set_figure_characteristics(axis_list, plot_params):
+def set_figure_characteristics(axis_matrix, plot_params):
     """
 
         Sets the figure parameters
 
-    :param axis_list: list of all axis in the grid
+    :param axis_matrix: list of all axis in the grid
     :param params: plot parameters received
     :return: nothing axis work by register, so their methods change them outside the function scope
     """
-
+    total_figure_number = get_total_figure_number(axis_matrix)
     # Loop through all axis
-    for i, axs in enumerate(axis_list):
+    for i in range(total_figure_number):
 
         if find_parameter(plot_params, 'xlim', i) is not None:
-            figure_hash(i, axis_list).set_xlim(find_parameter(plot_params, 'xlim', i))
+            figure_hash(i, axis_matrix).set_xlim(find_parameter(plot_params, 'xlim', i))
 
         if find_parameter(plot_params, 'ylim', i) is not None:
-            figure_hash(i, axis_list).set_ylim(find_parameter(plot_params, 'ylim'))
+            figure_hash(i, axis_matrix).set_ylim(find_parameter(plot_params, 'ylim'))
 
         if find_parameter(plot_params, 'logscale', i) is not None and 'X' in find_parameter(plot_params, 'logscale', i):
-            figure_hash(i, axis_list).set_xscale('log')
+            figure_hash(i, axis_matrix).set_xscale('log')
 
         if find_parameter(plot_params, 'logscale', i) is not None and 'Y' in find_parameter(plot_params, 'logscale', i):
-            figure_hash(i, axis_list).set_yscale('log')
+            figure_hash(i, axis_matrix).set_yscale('log')
 
         if find_parameter(plot_params, 'title', i) is not None:
-            figure_hash(i, axis_list).set_title(find_parameter(plot_params, 'title', i))
+            figure_hash(i, axis_matrix).set_title(find_parameter(plot_params, 'title', i))
 
         if find_parameter(plot_params, 'xlabel', i) is not None:
-            figure_hash(i, axis_list).set_xlabel(find_parameter(plot_params, 'xlabel', i))
+            figure_hash(i, axis_matrix).set_xlabel(find_parameter(plot_params, 'xlabel', i))
 
         if find_parameter(plot_params, 'ylabel', i) is not None:
-            figure_hash(i, axis_list).set_ylabel(find_parameter(plot_params, 'ylabel', i))
+            figure_hash(i, axis_matrix).set_ylabel(find_parameter(plot_params, 'ylabel', i))
 
         if find_parameter(plot_params, 'annotations', i) is not None:
             for annotations in find_parameter(plot_params, 'annotations', i):
-                figure_hash(i, axis_list).text(annotations[0], annotations[1], annotations[2])
+                figure_hash(i, axis_matrix).text(annotations[0], annotations[1], annotations[2])
 
 
 def set_global_parameters(fig, plot_params):
-
     if find_parameter(plot_params, 'pad') is not None:
         fig.tight_layout(pad=find_parameter(plot_params, 'pad'))
 
@@ -347,7 +313,7 @@ def set_global_parameters(fig, plot_params):
         fig.set_dpi(plot_params['dpi'])
 
 
-def plot_data(data, species, plot_params):
+def plot_data(data, plot_params):
     """
         This function plots the simulation results according to the specifications
 
@@ -355,8 +321,6 @@ def plot_data(data, species, plot_params):
     :param module_logger: logger from simulation to store plotting info
     :param plot_json: plot_json file with plotting instructions
     """
-    if not species:
-        raise TypeError('Plotting function did not receive any species')
 
     # Get the figure number from the list of figures
     # Add it to parameters
@@ -369,26 +333,21 @@ def plot_data(data, species, plot_params):
         figure_number = 1
 
     # Create figures grid, max_lines is 2 as default and the value is defined in the function
-    fig, axis_list = figure_hash_creation(figure_number, max_lines=find_parameter(plot_params, 'max_lines'))
+    fig, axis_matrix = figure_hash_creation(figure_number, max_lines=find_parameter(plot_params, 'max_lines'))
 
     # Set parameters common to all figures, like padding and figure size.
     set_global_parameters(fig, plot_params)
 
     # Global call for setting global parameters
-    set_figure_characteristics(axis_list, plot_params)
+    set_figure_characteristics(axis_matrix, plot_params)
 
     # Now we plot
     for figure_index in range(figure_number):
-        plot_curves(data, figure_hash(figure_index, axis_list), figure_index, plot_params, species)
+        plot_curves(data, figure_hash(figure_index, axis_matrix), figure_index, plot_params)
 
     # Real default case
     plt.show()
 
 
-
-
-
 if __name__ == "__main__":
-
-    plot_data("/Users/fabriciocravo/Downloads/BacSim Copasi/output/AB_2CD/test/test.pkl", 'text2.json')
-
+    pass
