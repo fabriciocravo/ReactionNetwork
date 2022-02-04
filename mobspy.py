@@ -102,6 +102,11 @@ class MobsPy:
             plot_params = self.Plot_Parameters
         return species, data, plot_params
 
+    def configure_parameters_from_json(self, file_name):
+        if file_name[-5:] != '.json':
+            raise TypeError('Wrong file extension')
+        self.Parameters = pr.read_json(file_name)
+
     # Plotting encapsulation
     def plot_stochastic(self, species=None, data=None, plot_params=None):
         plot_essentials = self.extract_plot_essentials(species, data, plot_params)

@@ -57,12 +57,15 @@ def __name_output_file(params, mappings):
 
 def __check_stochastic_repetitions_seeds(params):
 
-    if params['repetitions'] != len(params['seeds']):
-        pass
-    exit()
+    if 'seeds' in params:
+        try:
+            if params['repetitions'] != len(params['seeds']):
+                raise TypeError('Seeds must be equal to the number of repetitions')
+        except Exception:
+            raise TypeError('Parameter seeds must be a list')
 
 
 def parameter_process(params, mappings, params_for_sbml):
     __set_standard_duration(params, params_for_sbml)
     __name_output_file(params, mappings)
-    # __check_stochastic_repetitions_seeds(params)
+    __check_stochastic_repetitions_seeds(params)
