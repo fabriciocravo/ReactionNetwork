@@ -1,4 +1,4 @@
-from Modules.meta_class import *
+import Modules.meta_class as mc
 import Modules.reaction_construction_nb as rc
 
 
@@ -199,11 +199,17 @@ def prepare_arguments_for_callable(combination_of_reactant_species, reactant_str
         So then it can be given to it using **kwargs
     """
     argument_dict = {}
-    for species, reactant_string, argument in zip(combination_of_reactant_species,
-                                                  reactant_string_list,
-                                                  rate_function_arguments):
-        species = species['object']
-        argument_dict[argument] = Specific_Species_Operator(species_string=reactant_string, species_object=species)
+    i = 0
+    for i, (species, reactant_string) in enumerate(zip(combination_of_reactant_species, reactant_string_list)):
+        try:
+            species = species['object']
+            argument_dict[rate_function_arguments[i]] = Specific_Species_Operator(species_string=reactant_string, species_object=species)
+        except IndexError:
+            continue
+
+    while len(argument_dict) < len(rate_function_arguments):
+        argument_dict[rate_function_arguments[i]] = Specific_Species_Operator('$Null', mc.Zero)
+        i += 1
 
     return argument_dict
 

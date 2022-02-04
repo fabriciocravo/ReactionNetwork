@@ -11,7 +11,7 @@ if __name__ == '__main__':
     # My_Model.run()
     # exit()
 
-    def infection(r1, r2):
+    def infection(r1):
         if r1.old:
             return 0.02
         else:
