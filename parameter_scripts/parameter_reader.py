@@ -55,6 +55,14 @@ def __name_output_file(params, mappings):
     params['output_absolute_file'] = os.path.join(params['output_absolute_directory'], file_name)
 
 
+def __check_stochastic_repetitions_seeds(params):
+
+    if params['repetitions'] != len(params['seeds']):
+        pass
+    exit()
+
+
 def parameter_process(params, mappings, params_for_sbml):
     __set_standard_duration(params, params_for_sbml)
     __name_output_file(params, mappings)
+    # __check_stochastic_repetitions_seeds(params)

@@ -66,6 +66,7 @@ class MobsPy:
         self.SBML_string = builder.build(self._Species_for_SBML,
                                          self._Parameters_For_SBML,
                                          self._Reactions_For_SBML)
+
         self.Data = SBML_simulator.run.simulate(self.SBML_string, self.Parameters, self._Mappings_for_SBML)
 
         if self.Parameters['save_data']:

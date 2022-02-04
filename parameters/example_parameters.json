@@ -6,11 +6,13 @@
 
   "__comment_2": "basiCO parameters",
 
-  "simulation_method": "deterministic",
+  "simulation_method": "stochastic",
   "start_time": 0,
   "duration": null,
   "r_tol": 1e-8,
   "a_tol": 1e-10,
+  "seeds": [1, 2, 3],
+  "stepsize": 1,
 
   "__comment_3": "OUTPUT",
 

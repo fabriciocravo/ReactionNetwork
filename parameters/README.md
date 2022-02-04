@@ -18,5 +18,16 @@ We must decide which ones we implement and give to the user
 - start_time (float): the output start time. If the model is not at that start time, a simulation
 will be performed in one step, to reach it before starting to collect output.
 
-- intervals (
+- step_size (int): the output step size
+
+- seeds(list): set the seeds that will be used 
+
+- use_seed(bool): if true, the specified seed will be used
+
+- a_tol(float) : the absolute tolerance to be used
+
+- r_tol(float) : the relative tolerance to be used
+
+- max_steps(int) : the maximum number of internal steps the integrator is allowed to used
+
 

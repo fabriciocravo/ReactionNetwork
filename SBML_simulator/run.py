@@ -2,6 +2,7 @@ import basico
 import os
 from SBML_simulator import util
 from joblib import Parallel, delayed
+from copy import deepcopy
 
 
 def simulate(sbml_str, params, mappings):
@@ -45,7 +46,9 @@ def job_execution(sbml_str, params, jobs):
 
         data = basico.run_time_course(params['duration'],
                                       method=params["simulation_method"].lower(),
-                                      start_time=params["start_time"])
+                                      start_time=params["start_time"],
+                                      r_tol=params["r_tol"],
+                                      a_tol=params["a_tol"])
 
         reformated_data = reformat_time_series(data)
 
@@ -61,6 +64,29 @@ def job_execution(sbml_str, params, jobs):
     merged_data = merge(params, parallel_data)
 
     return merged_data
+
+
+def __run_time_course(duration, params, index):
+    """
+            This function prepares the parameters for the basiCO.run_time_course
+        params : simulation parameters
+        index : current index of the run
+        duration : simulation duration in seconds
+    """
+    kargs = {'method': params["simulation_method"].lower(),
+             'start_time': params["start_time"],
+             'r_tol': params["r_tol"],
+             'a_tol': params["a_tol"]}
+
+    if 'seeds' in params:
+        kargs['use_seed'] = True
+        kargs['seed'] = params['seed'][index]
+
+    if 'stepsize' in params:
+        kargs['automatic'] = False
+        kargs['stepsize'] = params['stepsize']
+
+    return basico.run_time_course(duration, **kargs)
 
 
 def reformat_time_series(data):
