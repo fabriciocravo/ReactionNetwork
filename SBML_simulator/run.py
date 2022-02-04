@@ -43,12 +43,7 @@ def job_execution(sbml_str, params, jobs):
     def __single_run(packed):
         sbml_str, i = packed
         basico.model_io.load_model_from_string(sbml_str)
-
-        data = basico.run_time_course(params['duration'],
-                                      method=params["simulation_method"].lower(),
-                                      start_time=params["start_time"],
-                                      r_tol=params["r_tol"],
-                                      a_tol=params["a_tol"])
+        data = __run_time_course(params['duration'], params, i)
 
         reformated_data = reformat_time_series(data)
 
@@ -80,7 +75,7 @@ def __run_time_course(duration, params, index):
 
     if 'seeds' in params:
         kargs['use_seed'] = True
-        kargs['seed'] = params['seed'][index]
+        kargs['seed'] = params['seeds'][index]
 
     if 'stepsize' in params:
         kargs['automatic'] = False

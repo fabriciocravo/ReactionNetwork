@@ -1,5 +1,5 @@
 import inspect
-import Modules.meta_class_utils as mc
+import Modules.meta_class_utils as mcu
 from Modules.order_operators import *
 from Modules.function_rate_code import *
 import Modules.reaction_construction_nb as rc
@@ -79,10 +79,10 @@ class Compiler:
         cls.name_all_involved_species(list_of_species_objects, names)
 
         # Perform checks
-        mc.add_negative_complement_to_characteristics(list_of_species_objects)
+        mcu.add_negative_complement_to_characteristics(list_of_species_objects)
 
         # Construct structures necessary for reactions
-        cls.Ref_characteristics_to_object = mc.create_orthogonal_vector_structure(list_of_species_objects)
+        cls.Ref_characteristics_to_object = mcu.create_orthogonal_vector_structure(list_of_species_objects)
 
         # Start by creating the Mappings for the SBML
         # Convert to user friendly format as well
@@ -95,7 +95,7 @@ class Compiler:
             list_of_definitions = []
             for reference in spe_object.get_references():
                 list_of_definitions.append(reference.get_characteristics())
-            cls.Species_string_dict[spe_object] = mc.create_species_strings(spe_object,
+            cls.Species_string_dict[spe_object] = mcu.create_species_strings(spe_object,
                                                                             list_of_definitions)
         # Set of reactions involved
         cls.Reactions_set = set()
@@ -122,12 +122,12 @@ class Compiler:
                     continue
 
                 count_set = \
-                    mc.complete_characteristics_with_first_values(spe_object,
+                    mcu.complete_characteristics_with_first_values(spe_object,
                                                                   count['characteristics'],
                                                                   cls.Ref_characteristics_to_object)
 
                 for species_string in Species_for_SBML.keys():
-                    species_set = mc.extract_characteristics_from_string(species_string)
+                    species_set = mcu.extract_characteristics_from_string(species_string)
                     if species_set == count_set:
                         Species_for_SBML[species_string] = count['quantity']
                         break
@@ -277,7 +277,7 @@ class Reacting_Species:
         for reactant in self.list_of_reactants:
 
             species_object = reactant['object']
-            characteristics_from_references = mc.unite_characteristics(species_object.get_references())
+            characteristics_from_references = mcu.unite_characteristics(species_object.get_references())
 
             if characteristic not in characteristics_from_references:
                 species_object.add_characteristic(characteristic)
@@ -403,7 +403,7 @@ class Species:
             IMPORTANT - DON'T USE DEEPCOPY - IT DOES NOT WORK WITH __getattr__
         """
 
-        characteristics_from_references = mc.unite_characteristics(self.get_references())
+        characteristics_from_references = mcu.unite_characteristics(self.get_references())
         characteristics = {characteristic}
 
         if characteristic not in characteristics_from_references:
@@ -452,10 +452,10 @@ class Species:
         Compiler.Entity_counter += 1
         name = 'E' + str(Compiler.Entity_counter)
         new_entity = Species(name)
-        new_entity.set_references(mc.combine_references(self, other))
+        new_entity.set_references(mcu.combine_references(self, other))
         new_entity.add_reference(new_entity)
 
-        mc.check_orthogonality_between_references(new_entity.get_references())
+        mcu.check_orthogonality_between_references(new_entity.get_references())
 
         return new_entity
 
@@ -584,7 +584,7 @@ if __name__ == '__main__':
     Mood.sad >> Mood.happy[3]
     # Live.live >> Live.dead[40]
     Human = Age * Mood
-    S0 >> Human[10]
+    Zero >> Human[10]
     Human(200)  # Human.young.sad.live
     Compiler.compile(Human | P, type_of_model='stochastic')
 
