@@ -8,10 +8,26 @@ from SBML_simulator import builder, util
 import plot_scripts.default_plots as dp
 import matplotlib.pyplot as plt
 
+
 import os
 
+# TODO Change - Write get extension function
+# TODO Change Create to BaseSpecies
+# TODO No more runs in axis, use legends
+# TODO Add external data
+# TODO Save data as Json
+# TODO No global color cycle - Object of a class to cycle through
+# TODO change parameters and plot parameters
+# TODO my_simulation.simulation_method = 'stochastic', my_simulation.plot.green = True
+# TODO base error logging - with print
+# TODO double reactions
+# TODO implement .c
+# TODO implement label
+# TODO Inspect - Go one up - and look at globals and locals
+# TODO PLOS
 
-class MobsPy:
+
+class Simulation:
 
     def __init__(self, model, names=None, parameters=None, plot_parameters=None):
         """
@@ -103,6 +119,7 @@ class MobsPy:
         return species, data, plot_params
 
     def configure_parameters_from_json(self, file_name):
+        # TODO Change - Write get extension function
         if file_name[-5:] != '.json':
             raise TypeError('Wrong file extension')
         self.Parameters = pr.read_json(file_name)

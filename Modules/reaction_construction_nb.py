@@ -104,6 +104,7 @@ def construct_order_structure(species_order_list, current_species_string_list):
     """
     cyclic_dict = {}
     for species_object, species_string in zip(species_order_list, current_species_string_list):
+
         try:
             cyclic_dict[species_object].append(species_string)
         except KeyError:
@@ -124,7 +125,8 @@ def construct_product_structure(reaction):
     product_list = []
     for product in reaction.products:
         for _ in range(product['stoichiometry']):
-            product_list.append({'species': product['object'], 'characteristics': product['characteristics']})
+            product_list.append({'species': product['object'], 'label':product['label'],
+                                 'characteristics': product['characteristics']})
 
     return product_list
 
@@ -202,7 +204,7 @@ def get_involved_species(reaction, Species_string_dict):
         for _ in range(reactant['stoichiometry']):
 
             species_for_reactant = []
-            base_species_order.append(reactant['object'])
+            base_species_order.append((reactant['object'], reactant['label']))
 
             for species in Species_string_dict:
                 if reactant['object'] in species.get_references():

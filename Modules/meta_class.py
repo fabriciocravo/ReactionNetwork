@@ -238,20 +238,26 @@ class Reacting_Species:
         It contains the species object reference, the characteristics involved in the reaction and finally the stoichiometry
         It adds up by appending elements to a list
     """
+    def label(self, label):
+        if len(self.list_of_reactants) == 1:
+            self.list_of_reactants[0]['label'] = label
+        else:
+            raise TypeError('Error assigning label to reactant')
+        return self
 
     def __getitem__(self, item):
         return Compiler.override_get_item(self, item)
 
-    def __init__(self, object_reference, characteristics, stoichiometry=1):
+    def __init__(self, object_reference, characteristics, stoichiometry=1, label=None):
         if object_reference.get_name() == 'S0' and characteristics == set():
             self.list_of_reactants = []
         else:
             self.list_of_reactants = [{'object': object_reference, 'characteristics': characteristics,
-                                       'stoichiometry': stoichiometry}]
+                                       'stoichiometry': stoichiometry, 'label': label}]
 
     def __add__(self, other):
         if isinstance(other, Species):
-            other = Reacting_Species(other, set())
+            other = Reacting_Species(other, set(), label=Species.label)
         self.list_of_reactants += other.list_of_reactants
         return self
 
@@ -320,6 +326,9 @@ class Species:
         Objects store all the basic information necessary to create an SBML file and construct a model
         So we construct the species through reactions and __getattr__ to form a model
     """
+    # Def labels
+    def label(self, label):
+        return Reacting_Species(self, set(), label=label)
 
     # Get data from species for debugging Compilers
     def __str__(self):
@@ -539,6 +548,7 @@ __S0.name('S0')
 __S1.name('S1')
 
 Zero = __S0
+New = __S1
 
 
 def Copy(species):

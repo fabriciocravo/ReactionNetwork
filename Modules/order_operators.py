@@ -94,16 +94,16 @@ class __Round_Robin_Base(__Operator_Base):
                  Ref_characteristics_to_object):
 
         round_robin_index = {}
-        for species in [e['species'] for e in product_species]:
-            round_robin_index[species] = 0
+        for species, label in [(e['species'], e['label']) for e in product_species]:
+            round_robin_index[(species, label)] = 0
 
         products = []
-        for species, characteristics in [(e['species'], e['characteristics']) for e in product_species]:
+        for species, label, characteristics in [(e['species'], e['label'], e['characteristics']) for e in product_species]:
 
             # Simple round robin
             try:
-                species_to_transform_string = order_dictionary[species][round_robin_index[species]]
-                round_robin_index[species] = (round_robin_index[species] + 1) % len(order_dictionary[species])
+                species_to_transform_string = order_dictionary[(species, label)][round_robin_index[(species, label)]]
+                round_robin_index[(species, label)] = (round_robin_index[(species, label)] + 1) % len(order_dictionary[(species, label)])
 
                 # Return in list of lists format for combination later
                 products.append([self.transform_species_string(species_to_transform_string, characteristics,
@@ -142,16 +142,16 @@ class __RR_Default_Base(__Operator_Base):
                  Ref_characteristics_to_object):
 
         round_robin_index = {}
-        for species in [e['species'] for e in product_species]:
-            round_robin_index[species] = 0
+        for species, label in [(e['species'], e['label']) for e in product_species]:
+            round_robin_index[(species, label)] = 0
 
         products = []
-        for species, characteristics in [(e['species'], e['characteristics']) for e in product_species]:
+        for species, label, characteristics in [(e['species'], e['label'], e['characteristics']) for e in product_species]:
 
             # Simple round robin
             try:
-                species_to_transform_string = order_dictionary[species][round_robin_index[species]]
-                round_robin_index[species] = (round_robin_index[species] + 1) % len(order_dictionary[species])
+                species_to_transform_string = order_dictionary[(species, label)][round_robin_index[(species, label)]]
+                round_robin_index[(species, label)] = (round_robin_index[(species, label)] + 1) % len(order_dictionary[(species, label)])
 
                 # Return in list of lists format for combination later
                 products.append([self.transform_species_string(species_to_transform_string, characteristics,
