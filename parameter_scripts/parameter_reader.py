@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 from pathlib import Path
 import numpy as np
+import simulation_logging.log_scripts as simlog
 
 
 def read_json(json_file_name):
@@ -18,7 +19,7 @@ def read_json(json_file_name):
         try:
             json_data = json.load(file)
         except json.decoder.JSONDecodeError as e:
-            raise TypeError('Error reading file')
+            simlog.error('Error reading file')
             exit(1)
 
     return json_data
@@ -33,7 +34,7 @@ def __set_standard_duration(params, params_for_sbml):
             rate = params_for_sbml[p][0]
             if rate < min_rate:
                 min_rate = rate
-        params['duration'] = (5*min_rate)*60
+        params['duration'] = 3/(min_rate*60)
 
 
 def __name_output_file(params, mappings):
@@ -48,7 +49,7 @@ def __name_output_file(params, mappings):
         file_name = "r"
         for species in mappings:
             file_name += '_' + str(species)
-        file_name += ' ' + str(datetime.now()) + '.pkl'
+        file_name += ' ' + str(datetime.now()) + '.json'
     else:
         file_name = params['output_file']
 
@@ -61,9 +62,9 @@ def __check_stochastic_repetitions_seeds(params):
     if 'seeds' in params:
         try:
             if params['repetitions'] != len(params['seeds']):
-                raise TypeError('Seeds must be equal to the number of repetitions')
+                simlog.error('Seeds must be equal to the number of repetitions')
         except Exception:
-            raise TypeError('Parameter seeds must be a list')
+            simlog.error('Parameter seeds must be a list')
 
 
 def parameter_process(params, mappings, params_for_sbml):

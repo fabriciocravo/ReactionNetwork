@@ -9,7 +9,7 @@
 #####################################################
 
 
-from SBML_simulator.SBMLWriter import create_model
+from sbml_simulator.SBMLWriter import create_model
 import libsbml as sbml, codecs
 
 import importlib

@@ -1,7 +1,8 @@
 from copy import deepcopy
-import Modules.function_rate_code as fr
+import modules.function_rate_code as fr
 import itertools
-import Modules.meta_class as mc
+import modules.meta_class as mc
+import simulation_logging.log_scripts as simlog
 
 
 def iterator_for_combinations(list_of_lists):
@@ -40,13 +41,13 @@ def copy_reaction(reaction):
     return reaction_copy
 
 
-def check_for_invalid_reactions(Reactions, Ref_characteristics_to_object):
+def check_for_invalid_reactions(reactions, ref_characteristics_to_object):
     """
         If a call references two characteristics from the same species it would result in nothing being called
         Like Ecoli.live.dead - (assuming live and dead belong from the same species)
         If that ever happens we just pop an error a
     """
-    for reaction in Reactions:
+    for reaction in reactions:
         for reactant in reaction.reactants:
 
             check_for_duplicates = {}
@@ -54,12 +55,12 @@ def check_for_invalid_reactions(Reactions, Ref_characteristics_to_object):
 
                 # Ok I love try catches for checking if something is in a dict. Don't judge me
                 try:
-                    check_for_duplicates[Ref_characteristics_to_object[cha]]
-                    raise TypeError('Illegal reaction, there is a product with multiple '
+                    check_for_duplicates[ref_characteristics_to_object[cha]]
+                    simlog.error('Illegal reaction, there is a product with multiple '
                                     'characteristics from the same Species referenced \n'
                                     'Please divide the reaction accordingly')
                 except KeyError:
-                    check_for_duplicates[Ref_characteristics_to_object[cha]] = cha
+                    check_for_duplicates[ref_characteristics_to_object[cha]] = cha
 
         for product in reaction.products:
 
@@ -68,27 +69,27 @@ def check_for_invalid_reactions(Reactions, Ref_characteristics_to_object):
 
                 # Ok I love try catches for checking if something is in a dict. Don't judge me
                 try:
-                    check_for_duplicates[Ref_characteristics_to_object[cha]]
-                    raise TypeError('Illegal reaction, there is a product with multiple '
+                    check_for_duplicates[ref_characteristics_to_object[cha]]
+                    simlog.error('Illegal reaction, there is a product with multiple '
                                     'characteristics from the same Species referenced \n'
                                     'Please divide the reaction accordingly')
                 except KeyError:
-                    check_for_duplicates[Ref_characteristics_to_object[cha]] = cha
+                    check_for_duplicates[ref_characteristics_to_object[cha]] = cha
 
 
-def construct_reactant_structures(reactant_species, Species_string_dict):
+def construct_reactant_structures(reactant_species, species_string_dict):
     species_string_combinations = []
 
     """=
         reactant_species: species objects of the involved species
-        Species_string_dict : dictionary with species objects as keys and corresponding species strings
+        species_string_dict : dictionary with species objects as keys and corresponding species strings
         
         Here we just find the corresponding strings according to the reactant species
         Pack then in a list and return
     """
     for reactant in reactant_species:
         species_string_combinations.append(extract_species_strings(reactant['object'],
-                                                                   reactant['characteristics'], Species_string_dict))
+                                                                   reactant['characteristics'], species_string_dict))
 
     return species_string_combinations
 
@@ -136,7 +137,7 @@ def construct_single_reaction_for_sbml(reactant_species_string_list, product_spe
         Here we construct the reactions for SBML for the conversion by the model builder script
         It follows the following structure 're':[('stoichmetry', reactantant_string) ....
         The reaction rate must be a string containing the reaction kinetics here
-        We return a single reaction to be appended by the Reactions_For_SBML dictionary
+        We return a single reaction to be appended by the reactions_for_sbml dictionary
     """
     to_return = {'re': [], 'pr': [], 'kin': reaction_rate}
 
@@ -168,7 +169,7 @@ def count_string_dictionary(list_of_strings):
     return to_return
 
 
-def extract_species_strings(species, characteristics, Species_string_dict):
+def extract_species_strings(species, characteristics, species_string_dict):
     """
         Extract a species_string from the species string dictionary
         Uses the species object as key
@@ -177,7 +178,7 @@ def extract_species_strings(species, characteristics, Species_string_dict):
     species_strings_list = []
     species_strings_to_filter = set()
 
-    species_strings_to_filter = species_strings_to_filter.union(Species_string_dict[species])
+    species_strings_to_filter = species_strings_to_filter.union(species_string_dict[species])
 
     for species_string in species_strings_to_filter:
         species_string_split = species_string.split('_dot_')
@@ -188,7 +189,7 @@ def extract_species_strings(species, characteristics, Species_string_dict):
     return species_strings_list
 
 
-def get_involved_species(reaction, Species_string_dict):
+def get_involved_species(reaction, species_string_dict):
     """
         Extract all the involved species with a reaction
         This is done since reactions are defined through base species (by multiplication)
@@ -206,14 +207,14 @@ def get_involved_species(reaction, Species_string_dict):
             species_for_reactant = []
             base_species_order.append((reactant['object'], reactant['label']))
 
-            for species in Species_string_dict:
+            for species in species_string_dict:
                 if reactant['object'] in species.get_references():
                     species_for_reactant.append({'object': species,
                                                  'characteristics': reactant['characteristics']})
                     flag_absent_reactant = True
 
         if not flag_absent_reactant:
-            raise TypeError(f'Species {reactant["object"]} was not found in model \n'
+            simlog.error(f'Species {reactant["object"]} was not found in model \n'
                             f'For reaction {reaction} \n'
                             f'Please add the species or remove the reaction')
 
@@ -222,33 +223,33 @@ def get_involved_species(reaction, Species_string_dict):
     return base_species_order, reactant_species_combination_list
 
 
-def create_all_reactions(Reactions, Species_string_dict,
-                         Ref_characteristics_to_object,
+def create_all_reactions(reactions, species_string_dict,
+                         ref_characteristics_to_object,
                          type_of_model):
     """
         This function creates all reactions
-        Returns the Reactions_For_SBML and Parameters_For_SBML dictionary
+        Returns the reactions_for_sbml and parameters_for_sbml dictionary
         Those will be used by another module to create the SBML file
 
-        Reactions: Reactions objects constructed by the meta_class module
-        Species_string_dict: Species object keys and respective species strings values
-        Ref_characteristics_to_object: Characteristics as keys objects as values
+        reactions: reactions objects constructed by the meta_class module
+        species_string_dict: Species object keys and respective species strings values
+        ref_characteristics_to_object: Characteristics as keys objects as values
         type_of_model: stochastic or deterministic
     """
 
-    Reactions_For_SBML = {}
-    Parameters_For_SBML = {}
+    reactions_for_sbml = {}
+    parameters_for_sbml = {}
 
-    check_for_invalid_reactions(Reactions, Ref_characteristics_to_object)
+    check_for_invalid_reactions(reactions, ref_characteristics_to_object)
 
-    for reaction in Reactions:
+    for reaction in reactions:
 
-        base_species_order, reactant_species_combination_list = get_involved_species(reaction, Species_string_dict)
+        base_species_order, reactant_species_combination_list = get_involved_species(reaction, species_string_dict)
 
         for combination_of_reactant_species in iterator_for_combinations(reactant_species_combination_list):
 
             reactant_species_string_combination_list = \
-                construct_reactant_structures(combination_of_reactant_species, Species_string_dict)
+                construct_reactant_structures(combination_of_reactant_species, species_string_dict)
 
             for reactant_string_list in iterator_for_combinations(reactant_species_string_combination_list):
 
@@ -256,70 +257,18 @@ def create_all_reactions(Reactions, Species_string_dict,
                 order_structure = construct_order_structure(base_species_order, reactant_string_list)
 
                 product_species_species_string_combination_list = reaction.order(order_structure, product_object_list,
-                                                                                 Species_string_dict,
-                                                                                 Ref_characteristics_to_object)
+                                                                                 species_string_dict,
+                                                                                 ref_characteristics_to_object)
 
                 for product_string_list in iterator_for_combinations(product_species_species_string_combination_list):
                     rate_string = fr.extract_reaction_rate(combination_of_reactant_species, reactant_string_list
-                                                           , reaction.rate, Parameters_For_SBML, type_of_model)
+                                                           , reaction.rate, parameters_for_sbml, type_of_model)
 
-                    Reactions_For_SBML['reaction_' + str(len(Reactions_For_SBML))] = \
+                    reactions_for_sbml['reaction_' + str(len(reactions_for_sbml))] = \
                         construct_single_reaction_for_sbml(reactant_string_list, product_string_list, rate_string)
 
-    return Reactions_For_SBML, Parameters_For_SBML
+    return reactions_for_sbml, parameters_for_sbml
 
 
 if __name__ == '__main__':
-    Ref_characteristics_to_object = {
-        'young': 1,
-        'old': 1,
-        'alive': 2,
-        'dead': 2,
-        'sad': 3,
-        'happy': 3
-    }
-
-    Species_string_dict = {
-        'Ecoli': {'Ecoli.young.alive.sad',
-                  'Ecoli.young.alive.happy',
-                  'Ecoli.young.dead.sad',
-                  'Ecoli.young.dead.happy',
-                  'Ecoli.old.alive.sad',
-                  'Ecoli.old.alive.happy',
-                  'Ecoli.old.dead.sad',
-                  'Ecoli.old.dead.happy'}
-    }
-
-
-    def reaction_rate_function_test(*args):
-        reaction_dict = args[0]
-        return 5
-
-
-    Reaction_rate_functions = {
-        'reaction_object': reaction_rate_function_test
-    }
-
-    Reactions = [
-        {'re': [('Ecoli', {'young'}, 1)], 'pr': [('Ecoli', {'old'}, 1)]}
-    ]
-
-    # TODO
-    # Ecoli.not_infected.yellow >> Ecoli.red
-    # Ecoli.not_infected.blue >> Ecoli.red
-
-    # 0 >> Ecoli
-
-    # Ecoli + P >> 0
-    # Ecoli + P >> Ecoli
-
-    # 0 >> Ecoli.young
-
-    # ResourceEater + R >> 2*ResourceEater
-
-    # 0 >> Ecoli
-    # Ecoli >> 2*Ecoli
-
-    # A + B >> C + D
-
-    # Carnivore >> Carnivore + Bone.bloody
+    pass

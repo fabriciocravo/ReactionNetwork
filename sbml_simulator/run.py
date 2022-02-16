@@ -1,8 +1,9 @@
 import basico
 import os
-from SBML_simulator import util
+from sbml_simulator import util
 from joblib import Parallel, delayed
 from copy import deepcopy
+import simulation_logging.log_scripts as simlog
 
 
 def simulate(sbml_str, params, mappings):
@@ -19,20 +20,20 @@ def simulate(sbml_str, params, mappings):
     # If nothing is specified just run it in parallel
     try:
         if params["jobs"] == 1:
-            print("Running simulation sequentially")
+            simlog.debug("Running simulation sequentially")
             jobs = params["jobs"]
         else:
-            print("Running simulation in parallel")
+            simlog.debug("Running simulation in parallel")
             jobs = params["jobs"]
     except KeyError:
-        print("Running simulation in parallel")
+        simlog.debug("Running simulation in parallel")
         jobs = -1
 
     # TODO: If cluster compatibility is added I suggest here
     data = job_execution(sbml_str, params, jobs)
     data = remap_species(data, mappings)
 
-    print("Simulation is Over")
+    simlog.debug("Simulation is Over")
     return {'data': data, 'params': params, 'mappings': mappings}
 
 
@@ -52,8 +53,8 @@ def job_execution(sbml_str, params, jobs):
     parallel_data = Parallel(n_jobs=jobs)(delayed(__single_run)((sbml_str, i)) for i in range(params['repetitions']))
 
     if not parallel_data:
-        raise TypeError("Error: The parallel model has not produced an output." +
-                        "Try addding ('sequential': True) to parameters")
+        simlog.error("Error: The parallel model has not produced an output." +
+                     "Try addding ('sequential': True) to parameters")
 
     # We always call merge to keep the data in the format we want
     merged_data = merge(params, parallel_data)
@@ -147,7 +148,7 @@ def remap_species(data, mapping):
                                                             for i in range(len(species))]) for t in T])
 
         except Exception:
-            raise ValueError(f'run: remap_species: error when remapping "{the_mapping}".' +
-                             'Possible fix: All runs must have the same time')
+            simlog.error(f'run: remap_species: error when remapping "{the_mapping}".' +
+                         'Possible fix: All runs must have the same time')
 
     return mapped_data

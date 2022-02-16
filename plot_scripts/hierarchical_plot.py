@@ -2,6 +2,7 @@ import json
 import os.path
 import math
 import plot_scripts.statistics_calculations as spd
+import simulation_logging.log_scripts as simlog
 
 import numpy as np
 import pickle as pkl
@@ -9,23 +10,26 @@ from pathlib import Path
 import inspect
 import matplotlib.pyplot as plt
 
-# Plot color global variable for cycling
-__plot_color = 0
-
 
 ####################### PRACTICAL FUNCTIONS
-
-def color_cycle():
+class Color_cycle:
     """
     :return: a simple color cycle fuction for different colors for different species
     """
 
-    color_list = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+    def __init__(self):
+        self.index = 0
+        self.color_list = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
-    global __plot_color
-    __plot_color = __plot_color + 1
+    def __call__(self, n):
+        self.index = (self.index + n) % len(self.color_list)
+        return self.color_list[self.index]
 
-    return color_list[__plot_color % len(color_list)]
+
+def find_species_time_series(spe, data):
+    for time_series in data:
+        if spe in time_series:
+            yield time_series
 
 
 # This function only works for the standart time we are currently using
@@ -47,9 +51,7 @@ def convert_to_time_unit(time_data, unit):
     elif unit == 'd':
         factor = 1 / 60 * 1 / 24
     else:
-        raise TypeError("Time unit not recognized. Plotting in minutes instead")
-        factor = 1
-        time_unit = 'min'
+        simlog.error("Time unit not recognized")
 
     # use np for speed
     time_data = list(np.array(time_data) * factor)
@@ -218,46 +220,61 @@ def plot_curves(data, axs, figure_index, plot_params):
         if find_parameter(plot_params, key='species_to_plot', index=(figure_index, plot_index)) is not None:
             species = find_parameter(plot_params, key='species_to_plot', index=(figure_index, plot_index))
         else:
-            raise ValueError('No species found for plotting in the Plotting Parameters')
+            simlog.error('No species found for plotting in the Plotting Parameters')
 
-        for spe in species:
+        # Get the time series to plot
+        if find_parameter(plot_params, key='time_series', index=(figure_index, plot_index)) is not None:
+            time_series = find_parameter(plot_params, key='time_series', index=(figure_index, plot_index))
+            if type(time_series) == int:
+                time_series = [time_series]
+        else:
+            time_series = list(range(len(data)))
 
-            if find_parameter(plot_params, key='runs', index=(figure_index, plot_index)) is not None:
-                runs = find_parameter(plot_params, key='runs', index=(figure_index, plot_index))
-            else:
-                runs = range(len(data[spe]['runs']))
+        for ts in time_series:
+            ts = data[ts - 1]
 
-            # Get the parameters assigned to the species, if not assign empty for None returns
-            if find_parameter(plot_params, key=spe, index=(figure_index, plot_index)) is not None:
-                species_characteristics = find_parameter(plot_params, key=spe, index=(figure_index, plot_index))
-            else:
-                species_characteristics = {}
+            for spe in species:
 
-            # Now we search the species characteristics for parameters
-            if find_parameter(species_characteristics, key='color') is not None:
-                curve_color = find_parameter(species_characteristics, key='color')
-            else:
-                curve_color = color_cycle()
+                color_index = 0
 
-            if find_parameter(species_characteristics, key='linestyle') is not None:
-                linestyle = find_parameter(species_characteristics, key='linestyle')
-            else:
-                linestyle = '-'
+                # Get the parameters assigned to the species, if not assign empty for None returns
+                if find_parameter(plot_params, key=spe, index=(figure_index, plot_index)) is not None:
+                    species_characteristics = find_parameter(plot_params, key=spe, index=(figure_index, plot_index))
+                else:
+                    species_characteristics = {}
 
-            if find_parameter(species_characteristics, key='linewidth') is not None:
-                linewidth = find_parameter(species_characteristics, key='linewidth')
-            else:
-                linewidth = None
+                # Now we search the species characteristics for parameters
+                if find_parameter(species_characteristics, key='color') is not None:
+                    curve_color = find_parameter(species_characteristics, key='color')
+                else:
+                    color_index = (color_index + 1) % len(Color_cycle().color_list)
+                    curve_color = Color_cycle()(color_index)
 
-            if find_parameter(species_characteristics, key='label') is not None:
-                label = find_parameter(species_characteristics, key='label')
-                legend_flag = True
-            else:
-                label = None
+                if find_parameter(species_characteristics, key='linestyle') is not None:
+                    linestyle = find_parameter(species_characteristics, key='linestyle')
+                else:
+                    linestyle = '-'
 
-            for run in runs:
-                axs.plot(data['Time'], data[spe]['runs'][run], color=curve_color,
-                         linestyle=linestyle, linewidth=linewidth, label=label)
+                if find_parameter(species_characteristics, key='linewidth') is not None:
+                    linewidth = find_parameter(species_characteristics, key='linewidth')
+                else:
+                    linewidth = None
+
+                if find_parameter(species_characteristics, key='label') is not None:
+                    label = find_parameter(species_characteristics, key='label')
+                    legend_flag = True
+                else:
+                    label = None
+
+                if find_parameter(plot_params, key='runs', index=(figure_index, plot_index)) is not None:
+                    runs = find_parameter(plot_params, key='runs', index=(figure_index, plot_index))
+                else:
+                    runs = range(len(ts[spe]['runs']))
+
+                for run in runs:
+                    axs.plot(ts['Time'], ts[spe]['runs'][run], color=curve_color,
+                             linestyle=linestyle, linewidth=linewidth, label=label)
+                    label = None
 
     if legend_flag:
         axs.legend()

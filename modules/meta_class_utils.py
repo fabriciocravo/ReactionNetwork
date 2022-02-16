@@ -1,5 +1,6 @@
 import copy
 import itertools
+import simulation_logging.log_scripts as simlog
 
 
 def unite_dictionaries(first_dict, second_dict):
@@ -34,7 +35,7 @@ def check_orthogonality_between_references(references):
                 continue
 
             if len(reference1.get_characteristics().intersection(reference2.get_characteristics())) != 0:
-                raise TypeError('A characteristic must be unique between different base properties')
+                simlog.error('A characteristic must be unique between different base properties')
 
 
 def complete_characteristics_with_first_values(spe_object, characteristics, characteristics_to_object):
@@ -51,7 +52,7 @@ def complete_characteristics_with_first_values(spe_object, characteristics, char
     for cha in characteristics:
         vector = characteristics_to_object[cha]
         if vector in vector_elements:
-            raise TypeError('The assignment refers to multiple strings')
+            simlog.error('The assignment refers to multiple strings')
         else:
             vector_elements[vector] = True
 
@@ -132,19 +133,19 @@ def create_orthogonal_vector_structure(species):
             We use the dictionary structure to easily define the reactions as being transformations
             within the same unity vector
     '''
-    Ref_characteristics_to_object = {}
+    ref_characteristics_to_object = {}
     for spe in species:
         for prop in spe.get_references():
             for cha in prop.get_characteristics():
 
-                if cha not in Ref_characteristics_to_object:
-                    Ref_characteristics_to_object[cha] = prop
-                elif Ref_characteristics_to_object[cha] == prop:
+                if cha not in ref_characteristics_to_object:
+                    ref_characteristics_to_object[cha] = prop
+                elif ref_characteristics_to_object[cha] == prop:
                     pass
                 else:
-                    raise TypeError('Characteristics must be unique for modeling properties')
+                    simlog.error('Characteristics must be unique for modeling properties')
 
-    return Ref_characteristics_to_object
+    return ref_characteristics_to_object
 
 
 def create_species_strings(spe_object, sets_of_characteristics):

@@ -1,9 +1,5 @@
-from parameter_scripts.parameter_reader import read_json
-
-
-# This was just created to avoid potential directory compatibilities
-def get_default_parameters():
-    default_parameters = {
+def get_example_parameters():
+    example_parameters = {
         "__comment_1": "Model parameters - Repetitions only for stochastic",
 
         "volume_ml": 1,
@@ -11,18 +7,20 @@ def get_default_parameters():
 
         "__comment_2": "basiCO parameters",
 
-        "simulation_method": "deterministic",
+        "simulation_method": "stochastic",
         "start_time": 0,
         "duration": None,
         "r_tol": 1e-8,
         "a_tol": 1e-10,
+        "seeds": [1, 2, 3],
+        "stepsize": 1,
 
         "__comment_3": "OUTPUT",
 
         "output_dir": "outputs/",
         "output_file": None,
         "save_data": False,
-        "plot": True
+        "plot_data": True
 
     }
-    return default_parameters
+    return example_parameters

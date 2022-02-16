@@ -1,5 +1,5 @@
 from copy import deepcopy
-import Modules.meta_class_utils as mc
+import modules.meta_class_utils as mc
 
 
 class __Operator_Base:
@@ -16,7 +16,7 @@ class __Operator_Base:
     # Transform product function
     @staticmethod
     def transform_species_string(species_string, characteristics_to_transform,
-                                 Ref_characteristics_to_object):
+                                 ref_characteristics_to_object):
         """
             species_string : A string associated with a species in the form of Species.c1.c2.c3
             characteristics_to_transform : Characteristics received by the species object in the product
@@ -31,7 +31,7 @@ class __Operator_Base:
         """
         species_to_return = deepcopy(species_string)
         for characteristic in characteristics_to_transform:
-            replaceable_characteristics = Ref_characteristics_to_object[characteristic].get_characteristics()
+            replaceable_characteristics = ref_characteristics_to_object[characteristic].get_characteristics()
 
             for rep_cha in replaceable_characteristics:
                 species_to_return = species_to_return.replace('_dot_' + rep_cha, '_dot_' + characteristic)
@@ -39,30 +39,30 @@ class __Operator_Base:
         return species_to_return
 
     @staticmethod
-    def find_all_string_references_to_born_species(species, characteristics, Species_string_dictionary):
+    def find_all_string_references_to_born_species(species, characteristics, species_string_dictionary):
         to_return = []
-        for key in Species_string_dictionary:
+        for key in species_string_dictionary:
             if species in key.get_references():
-                for species_string in Species_string_dictionary[key]:
+                for species_string in species_string_dictionary[key]:
                     species_string_split = species_string.split('_dot_')
                     if all(char in species_string_split for char in characteristics):
                         to_return.append(species_string)
         return to_return
 
     @staticmethod
-    def find_all_default_references_to_born_species(species, characteristics, Species_string_dictionary,
-                                                    Ref_characteristics_to_object):
+    def find_all_default_references_to_born_species(species, characteristics, species_string_dictionary,
+                                                    ref_characteristics_to_object):
         to_return = []
 
         characteristics_to_find = mc.complete_characteristics_with_first_values(species, characteristics,
-                                                                                Ref_characteristics_to_object)
+                                                                                ref_characteristics_to_object)
 
         characteristics_to_find.remove(species.get_name())
         characteristics_to_find.union(characteristics)
 
-        for key in Species_string_dictionary:
+        for key in species_string_dictionary:
             if species in key.get_references():
-                for species_string in Species_string_dictionary[key]:
+                for species_string in species_string_dictionary[key]:
                     species_string_split = species_string.split('_dot_')
                     if all(char in species_string_split for char in characteristics_to_find):
                         to_return.append(species_string)
@@ -90,8 +90,8 @@ class __Round_Robin_Base(__Operator_Base):
     """
 
     def __call__(self, order_dictionary, product_species,
-                 Species_string_dictionary,
-                 Ref_characteristics_to_object):
+                 species_string_dictionary,
+                 ref_characteristics_to_object):
 
         round_robin_index = {}
         for species, label in [(e['species'], e['label']) for e in product_species]:
@@ -107,21 +107,21 @@ class __Round_Robin_Base(__Operator_Base):
 
                 # Return in list of lists format for combination later
                 products.append([self.transform_species_string(species_to_transform_string, characteristics,
-                                                               Ref_characteristics_to_object)])
+                                                               ref_characteristics_to_object)])
 
             # If the species is not on the reactants - order_dictionary
             except KeyError:
 
                 # Find all the species that reference the one in the reaction
                 species_is_referenced_by = []
-                for key in Species_string_dictionary:
+                for key in species_string_dictionary:
                     if species in key.get_references():
                         species_is_referenced_by.append(key)
 
                 for referenciator_species in species_is_referenced_by:
                     products.append(self.find_all_string_references_to_born_species(referenciator_species,
                                                                                     characteristics,
-                                                                                    Species_string_dictionary))
+                                                                                    species_string_dictionary))
 
         return products
 
@@ -138,8 +138,8 @@ class __RR_Default_Base(__Operator_Base):
 
     # Here is the default order requested by Thomas
     def __call__(self, order_dictionary, product_species,
-                 Species_string_dictionary,
-                 Ref_characteristics_to_object):
+                 species_string_dictionary,
+                 ref_characteristics_to_object):
 
         round_robin_index = {}
         for species, label in [(e['species'], e['label']) for e in product_species]:
@@ -155,22 +155,22 @@ class __RR_Default_Base(__Operator_Base):
 
                 # Return in list of lists format for combination later
                 products.append([self.transform_species_string(species_to_transform_string, characteristics,
-                                                               Ref_characteristics_to_object)])
+                                                               ref_characteristics_to_object)])
 
             # If the species is not on the reactants - order_dictionary
             except KeyError:
 
                 # Find all the species that reference the one in the reaction
                 species_is_referenced_by = []
-                for key in Species_string_dictionary:
+                for key in species_string_dictionary:
                     if species in key.get_references():
                         species_is_referenced_by.append(key)
 
                 for referenciator_species in species_is_referenced_by:
                     products.append(self.find_all_default_references_to_born_species(referenciator_species,
                                                                                      characteristics,
-                                                                                     Species_string_dictionary,
-                                                                                     Ref_characteristics_to_object))
+                                                                                     species_string_dictionary,
+                                                                                     ref_characteristics_to_object))
 
         return products
 

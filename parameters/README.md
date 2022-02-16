@@ -8,8 +8,7 @@ We must decide which ones we implement and give to the user
 
 - update_model (bool) : sets whether the model should be updated, or reset to initial conditions
 
-- simulation_method : sets the simulation method to use (deterministic, stochastic X
-`hybridode45`, `hybridlsoda`, `adaptivesa`, `tauleap`, `radau5`, `sde`
+- simulation_method : sets the simulation method to use (deterministic, stochastic)
 
 - duration (float): the duration in time units for how long to simulate)
 

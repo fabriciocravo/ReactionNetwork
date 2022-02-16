@@ -1,8 +1,8 @@
 import inspect
-import Modules.meta_class_utils as mcu
-from Modules.order_operators import *
-from Modules.function_rate_code import *
-import Modules.reaction_construction_nb as rc
+import modules.meta_class_utils as mcu
+from modules.order_operators import *
+from modules.function_rate_code import *
+import modules.reaction_construction_nb as rc
 
 
 # Easter Egg: I finished the first version on a sunday at the BnF in Paris
@@ -16,12 +16,11 @@ class Compiler:
     """
 
     # Basic storage of defined variables for Compiler
-    Entity_counter = 0
-    Reactions_set = set()
-    Species_string_dict = {}
-    Ref_object_to_characteristics = {}
-    Ref_characteristics_to_object = {}
-    Last_rate = None
+    entity_counter = 0
+    reactions_set = set()
+    species_string_dict = {}
+    ref_characteristics_to_object = {}
+    last_rate = None
 
     @classmethod
     def override_get_item(cls, object_to_return, item):
@@ -29,25 +28,21 @@ class Compiler:
             Due to priority in python the item is stored before the reaction
             So it is stored in the Compiler level and passed to the reaction object in the end
         """
-        cls.Last_rate = item
+        cls.last_rate = item
         return object_to_return
 
     @classmethod
-    def name_all_involved_species(cls, list_of_species_objects, names=None):
+    def name_all_involved_species(cls, names=None):
         """
             Name species automatically according to their variable names
         """
         if not names:
-            raise TypeError('Species must be named' +
-                            'Please set ( names == globals() ) in the MobsPy constructor for automatic naming')
+            simlog.error('Species must be named' +
+                         'Please set ( names == globals() ) in the MobsPy constructor for automatic naming')
 
-        for species in list_of_species_objects:
-            try:
-                variable_name = [k for k, v in names.items() if v == species][0]
-                species.name(variable_name)
-            except KeyError:
-                raise ValueError('There is a non-named species. '
-                                 'Please set ( names == globals() ) in the MobsPy constructor for automatic naming')
+        for name, key in names.items():
+            if isinstance(key, Species):
+                key.name(name)
 
     @classmethod
     def compile(cls, species_to_simulate, volume_ml, names=None, type_of_model='deterministic', verbose=True):
@@ -60,7 +55,7 @@ class Compiler:
         elif isinstance(species_to_simulate, ParallelSpecies):
             list_of_species_objects = species_to_simulate.list_of_species
         else:
-            raise TypeError('Wrong input type')
+            simlog.error('Wrong input type')
 
         """
             Here we construct the species for Copasi using their objects
@@ -76,43 +71,43 @@ class Compiler:
         """
 
         # We name the species according to variables names for convenience
-        cls.name_all_involved_species(list_of_species_objects, names)
+        cls.name_all_involved_species(names)
 
         # Perform checks
         mcu.add_negative_complement_to_characteristics(list_of_species_objects)
 
         # Construct structures necessary for reactions
-        cls.Ref_characteristics_to_object = mcu.create_orthogonal_vector_structure(list_of_species_objects)
+        cls.ref_characteristics_to_object = mcu.create_orthogonal_vector_structure(list_of_species_objects)
 
         # Start by creating the Mappings for the SBML
         # Convert to user friendly format as well
-        Mappings_for_SBML = {}
+        mappings_for_sbml = {}
         for spe_object in list_of_species_objects:
-            Mappings_for_SBML[spe_object.get_name()] = []
+            mappings_for_sbml[spe_object.get_name()] = []
 
         # List of Species objects
         for spe_object in list_of_species_objects:
             list_of_definitions = []
             for reference in spe_object.get_references():
                 list_of_definitions.append(reference.get_characteristics())
-            cls.Species_string_dict[spe_object] = mcu.create_species_strings(spe_object,
-                                                                            list_of_definitions)
+            cls.species_string_dict[spe_object] = mcu.create_species_strings(spe_object,
+                                                                             list_of_definitions)
         # Set of reactions involved
-        cls.Reactions_set = set()
+        cls.reactions_set = set()
         for spe_object in list_of_species_objects:
             for reference in spe_object.get_references():
-                cls.Reactions_set = cls.Reactions_set.union(reference.get_reactions())
+                cls.reactions_set = cls.reactions_set.union(reference.get_reactions())
 
         # Setting Species for SBML and 0 for counts
-        Species_for_SBML = {}
+        species_for_sbml = {}
         for spe_object in list_of_species_objects:
-            for species_string in cls.Species_string_dict[spe_object]:
-                Species_for_SBML[species_string] = 0
+            for species_string in cls.species_string_dict[spe_object]:
+                species_for_sbml[species_string] = 0
 
-        # Create the mappings for sbml
+        # BaseSpecies the mappings for sbml
         for spe_object in list_of_species_objects:
-            for species_string in cls.Species_string_dict[spe_object]:
-                Mappings_for_SBML[spe_object.get_name()].append(species_string.replace('_dot_', '.'))
+            for species_string in cls.species_string_dict[spe_object]:
+                mappings_for_sbml[spe_object.get_name()].append(species_string.replace('_dot_', '.'))
 
         # Set initial counts for SBML
         for spe_object in list_of_species_objects:
@@ -123,56 +118,68 @@ class Compiler:
 
                 count_set = \
                     mcu.complete_characteristics_with_first_values(spe_object,
-                                                                  count['characteristics'],
-                                                                  cls.Ref_characteristics_to_object)
+                                                                   count['characteristics'],
+                                                                   cls.ref_characteristics_to_object)
 
-                for species_string in Species_for_SBML.keys():
+                for species_string in species_for_sbml.keys():
                     species_set = mcu.extract_characteristics_from_string(species_string)
                     if species_set == count_set:
-                        Species_for_SBML[species_string] = count['quantity']
+                        species_for_sbml[species_string] = count['quantity']
                         break
 
         # Volume correction
-        for s in Species_for_SBML:
-            Species_for_SBML[s] = int(Species_for_SBML[s] * volume_ml)
+        for s in species_for_sbml:
+            species_for_sbml[s] = int(species_for_sbml[s] * volume_ml)
 
-        # Create reactions for SBML with theirs respective parameters and rates
+        # BaseSpecies reactions for SBML with theirs respective parameters and rates
         # What do I have so far
         # Species_String_Dict and a set of reaction objects in Reactions_Set
-        Reactions_For_SBML, Parameters_For_SBML = rc.create_all_reactions(cls.Reactions_set,
-                                                                          cls.Species_string_dict,
-                                                                          cls.Ref_characteristics_to_object,
+        reactions_for_sbml, parameters_for_sbml = rc.create_all_reactions(cls.reactions_set,
+                                                                          cls.species_string_dict,
+                                                                          cls.ref_characteristics_to_object,
                                                                           type_of_model)
+
+        # O(n^2) reaction check for doubles
+        for i, r1 in enumerate(reactions_for_sbml):
+            for j, r2 in enumerate(reactions_for_sbml):
+                if i == j:
+                    continue
+
+                if reactions_for_sbml[r1]['re'] == reactions_for_sbml[r2]['re'] \
+                        and reactions_for_sbml[r1]['pr'] == reactions_for_sbml[r2]['pr']:
+                    simlog.warning('The following reaction: \n' +
+                                   f'{reactions_for_sbml[r1]} \n' +
+                                   'Is doubled. Was that intentional? \n')
 
         # Attach units to rates
         # Set rates to per_minute and not per_second
-        for p in Parameters_For_SBML:
-            Parameters_For_SBML[p] = (Parameters_For_SBML[p], 'per_min')
+        for p in parameters_for_sbml:
+            parameters_for_sbml[p] = (parameters_for_sbml[p], 'per_min')
 
         if verbose:
-            print()
-            print('Species')
-            for species in Species_for_SBML:
-                print(species.replace('_dot_', '.'), Species_for_SBML[species])
-            print()
+            simlog.debug()
+            simlog.debug('Species')
+            for species in species_for_sbml:
+                simlog.debug(species.replace('_dot_', '.') + ',' + str(species_for_sbml[species]))
+            simlog.debug()
 
-            print('Mappings')
-            for mapping in Mappings_for_SBML:
-                print(str(mapping) + ' :')
-                for element in Mappings_for_SBML[mapping]:
-                    print(element)
-            print()
+            simlog.debug('Mappings')
+            for mapping in mappings_for_sbml:
+                simlog.debug(str(mapping) + ' :')
+                for element in mappings_for_sbml[mapping]:
+                    simlog.debug(element)
+            simlog.debug()
 
-            print('Parameters')
-            for parameters in Parameters_For_SBML:
-                print(parameters, Parameters_For_SBML[parameters])
-            print()
+            simlog.debug('Parameters')
+            for parameters in parameters_for_sbml:
+                simlog.debug(parameters + ',' + str(parameters_for_sbml[parameters]))
+            simlog.debug()
 
-            print('Reactions')
-            for reaction in Reactions_For_SBML:
-                print(reaction, str(Reactions_For_SBML[reaction]).replace('_dot_', '.'))
+            simlog.debug('Reactions')
+            for reaction in reactions_for_sbml:
+                simlog.debug(reaction + ',' + str(reactions_for_sbml[reaction]).replace('_dot_', '.'))
 
-        return Species_for_SBML, Reactions_For_SBML, Parameters_For_SBML, Mappings_for_SBML
+        return species_for_sbml, reactions_for_sbml, parameters_for_sbml, mappings_for_sbml
 
 
 class Reactions:
@@ -184,7 +191,7 @@ class Reactions:
     @staticmethod
     def __create_reactants_string(list_of_reactants):
         """
-            Just a simple way to print reactions for debbuging
+            Just a simple way to simlog.debug reactions for debbuging
             Not relevant for simulation
         """
         reaction_string = ''
@@ -217,9 +224,9 @@ class Reactions:
         # Assign default order
         self.order = Round_Robin_RO
 
-        self.rate = Compiler.Last_rate
-        if Compiler.Last_rate is not None:
-            Compiler.Last_rate = None
+        self.rate = Compiler.last_rate
+        if Compiler.last_rate is not None:
+            Compiler.last_rate = None
 
         # Here we extract all involved objects to pact them in a set
         # This is done to find the reactions associated with the species when the Compiler is started
@@ -238,11 +245,14 @@ class Reacting_Species:
         It contains the species object reference, the characteristics involved in the reaction and finally the stoichiometry
         It adds up by appending elements to a list
     """
+    def c(self, item):
+        return self.__getattr__(item)
+
     def label(self, label):
         if len(self.list_of_reactants) == 1:
             self.list_of_reactants[0]['label'] = label
         else:
-            raise TypeError('Error assigning label to reactant')
+            simlog.error('Error assigning label to reactant')
         return self
 
     def __getitem__(self, item):
@@ -272,7 +282,7 @@ class Reacting_Species:
 
     def __call__(self, quantity):
         if len(self.list_of_reactants) != 1:
-            raise TypeError('Assignment used incorrectly')
+            simlog.error('Assignment used incorrectly')
 
         species_object = self.list_of_reactants[0]['object']
         characteristics = self.list_of_reactants[0]['characteristics']
@@ -305,7 +315,7 @@ class ParallelSpecies:
 
     def append(self, species):
         if not isinstance(species, Species):
-            raise TypeError('Only Species can be appended')
+            simlog.error('Only Species can be appended')
         self.list_of_species.append(species)
 
     def __or__(self, other):
@@ -315,7 +325,7 @@ class ParallelSpecies:
         elif isinstance(other, ParallelSpecies):
             return ParallelSpecies(self.list_of_species + other.list_of_species)
         else:
-            raise TypeError('Operator must only be used in Species on ParallelSpecies')
+            simlog.error('Operator must only be used in Species on ParallelSpecies')
 
 
 class Species:
@@ -326,6 +336,10 @@ class Species:
         Objects store all the basic information necessary to create an SBML file and construct a model
         So we construct the species through reactions and __getattr__ to form a model
     """
+    # Def c to get the value
+    def c(self, item):
+        return self.__getattr__(item)
+
     # Def labels
     def label(self, label):
         return Reacting_Species(self, set(), label=label)
@@ -335,28 +349,28 @@ class Species:
         return self._name
 
     def show_reactions(self):
-        print(str(self) + '_dot_')
+        simlog.debug(str(self) + '_dot_')
         for reference in self._references:
             for reaction in reference.get_reactions():
-                print(reaction)
+                simlog.debug(reaction)
 
     def show_characteristics(self):
-        print(str(self) + ' has the following characteristics referenced:')
+        simlog.debug(str(self) + ' has the following characteristics referenced:')
         for i, reference in enumerate(self.get_references()):
             if reference.get_characteristics():
-                print(str(reference) + ': ', end='')
-                reference.print_characteristics()
+                simlog.debug(str(reference) + ': ', end='')
+                reference.simlog.debug_characteristics()
 
     def show_references(self):
-        print(str(self) + '_dot_')
-        print('{', end='')
+        simlog.debug(str(self) + '_dot_')
+        simlog.debug('{', end='')
         for i, reference in enumerate(self.get_references()):
             if reference.get_characteristics():
-                print(' ' + str(reference) + ' ', end='')
-        print('}')
+                simlog.debug(' ' + str(reference) + ' ', end='')
+        simlog.debug('}')
 
     def show_quantities(self):
-        print(self._species_counts)
+        simlog.debug(self._species_counts)
 
     # Creation of ParallelSpecies For Simulation ##################
     def __or__(self, other):
@@ -374,7 +388,7 @@ class Species:
         if type(stoichiometry) == int:
             r = Reacting_Species(self, set(), stoichiometry)
         else:
-            raise ValueError('Stoichiometry can only be an int')
+            simlog.error('Stoichiometry can only be an int')
         return r
 
     def __add__(self, other):
@@ -458,8 +472,8 @@ class Species:
             We do not concatenate characteristics. This keeps the structure intact for reaction construction
             Instead we combine the sets of references. Every processes references itself
         """
-        Compiler.Entity_counter += 1
-        name = 'E' + str(Compiler.Entity_counter)
+        Compiler.entity_counter += 1
+        name = 'E' + str(Compiler.entity_counter)
         new_entity = Species(name)
         new_entity.set_references(mcu.combine_references(self, other))
         new_entity.add_reference(new_entity)
@@ -498,7 +512,7 @@ class Species:
         self._characteristics.remove(characteristic)
 
     def print_characteristics(self):
-        print(self._characteristics)
+        simlog.debug(self._characteristics)
 
     def get_references(self):
         return self._references
@@ -520,15 +534,15 @@ class Species:
 
 
 # Property Call to return several properties as called
-def Create(number_of_properties=1):
+def BaseSpecies(number_of_properties=1):
     """
         A function to create multiple species at once
         Reduce the number of lines
     """
     to_return = []
     for i in range(number_of_properties):
-        Compiler.Entity_counter += 1
-        name = 'P' + str(Compiler.Entity_counter)
+        Compiler.entity_counter += 1
+        name = 'P' + str(Compiler.entity_counter)
         to_return.append(Species(name))
 
     if number_of_properties == 1:
@@ -543,63 +557,12 @@ def Create(number_of_properties=1):
     The One is used to create new similar instances of a base species
     It's used to implement Copy
 """
-__S0, __S1 = Create(2)
+__S0, __S1 = BaseSpecies(2)
 __S0.name('S0')
 __S1.name('S1')
 
 Zero = __S0
 New = __S1
 
-
-def Copy(species):
-    return species*__S1
-
-
 if __name__ == '__main__':
-
-    # TODO: Fix this
-    Age, Mood, Live, Phage, Infection = Create(5)
-
-
-    # A, B, C, D = Create(4)
-    # A(100) + B(100) >> C + D[20]
-    # print(Compiler.compile(A | B | C | D, type_of_model='stochastic'))
-    # exit()
-
-    # TODO Check
-    # Mood.sad >> Mood.happy [10]
-    # Age.young >> Age.old [3]
-    # Default_RR[ S0 >> Age [20] ]
-    # Human = Age*Mood
-    # Compiler.compile(Human, type_of_model='stochastic')
-    # exit()
-
-    def rate(x):
-        if x.happy:
-            return 10
-        else:
-            return 5
-
-
-    Age.young >> Age.old[rate]
-    Mood.sad >> Mood.happy[3]
-    Human = Age * Mood
-    Human(200)  # Human.young.sad.live
-    Compiler.compile(Human, type_of_model='stochastic')
-    exit()
-
-    P = Create(1)
-
-    Age.young >> Age.old[rate]
-    Mood.sad >> Mood.happy[3]
-    # Live.live >> Live.dead[40]
-    Human = Age * Mood
-    Zero >> Human[10]
-    Human(200)  # Human.young.sad.live
-    Compiler.compile(Human | P, type_of_model='stochastic')
-
-    exit()
-
-    A, B, C, D = Create(4)
-    A(100) + B(100) >> C + D[20]
-    print(Compiler.compile(A | B | C | D, type_of_model='stochastic'))
+    pass
