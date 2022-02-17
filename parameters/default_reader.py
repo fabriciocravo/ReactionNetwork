@@ -21,7 +21,7 @@ def get_default_parameters():
 
         "output_dir": "outputs/",
         "output_file": None,
-        "save_data": False,
+        "save_data": True,
         "plot": True
 
     }
